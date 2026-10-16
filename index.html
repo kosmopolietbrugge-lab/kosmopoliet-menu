@@ -1,120 +1,65 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Kosmopoliet — Menukaart</title>
-<meta name="theme-color" content="#1b1a1a">
-<meta name="description" content="De menukaart van Kosmopoliet, plantaardig eetcafé in Brugge.">
-<link rel="icon" href="logo.png">
-<style>
-:root{--gold:#E4B569;--bg:#1b1a1a;--surface:#262425;--surface2:#302d2e;--border:#413c3d;--text:#f4ece2;--dim:#b9aca0;--maxw:680px;
-  --fd:"Archane",Georgia,"Times New Roman",serif;--fb:"Corbel","Segoe UI",system-ui,-apple-system,sans-serif}
-*{box-sizing:border-box}
-html,body{margin:0}
-body{font-family:var(--fb);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;overflow-x:hidden}
-header{max-width:var(--maxw);margin:0 auto;padding:22px 16px 6px;display:flex;align-items:center;gap:14px}
-header img{width:46px;height:auto;flex:0 0 auto}
-header h1{font-family:var(--fd);font-size:28px;margin:0;line-height:1;letter-spacing:.02em;color:#f7efe4}
-header p{margin:4px 0 0;color:var(--gold);font-size:13px;letter-spacing:.04em}
-header .lang{margin-left:auto;background:none;border:1px solid var(--border);color:var(--dim);border-radius:999px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer}
-.note{max-width:var(--maxw);margin:6px auto 0;padding:0 16px;color:var(--dim);font-size:13px}
-nav{position:sticky;top:0;z-index:5;display:flex;gap:8px;overflow-x:auto;padding:12px 16px;background:linear-gradient(var(--bg) 80%,rgba(27,26,26,0));scrollbar-width:none}
-nav::-webkit-scrollbar{display:none}
-nav button{white-space:nowrap;padding:9px 16px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;font-size:14px;cursor:pointer}
-nav button.on{background:var(--gold);color:#2C2A2B;border-color:var(--gold);font-weight:700}
-main{max-width:var(--maxw);margin:0 auto;padding:6px 16px 60px}
-h2{font-family:var(--fd);font-size:23px;margin:14px 4px 12px;color:var(--gold);letter-spacing:.02em;font-weight:400}
-.item{display:block;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:13px 14px;margin:0 0 10px;cursor:pointer}
-.item .row{display:flex;gap:12px;align-items:baseline;justify-content:space-between}
-.item h3{margin:0;font-size:16px;font-weight:700}
-.item .p{white-space:nowrap;font-weight:700;color:var(--text)}
-.item .p s{color:#9a8f80;font-weight:400;margin-right:6px}
-.item .s{margin:4px 0 0;color:var(--dim);font-size:13.5px;line-height:1.4}
-.item .more{display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);font-size:14px;line-height:1.55}
-.item.open .more{display:block}
-.item .more .x{color:var(--dim);font-size:13px;margin-top:8px}
-.al{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.al span{font-size:12.5px;padding:5px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--border)}
-.al .ask{color:var(--dim)}
-footer{max-width:var(--maxw);margin:0 auto;padding:6px 16px 40px;color:var(--dim);font-size:12.5px;line-height:1.5}
-.err{max-width:var(--maxw);margin:30px auto;padding:0 16px;color:var(--dim)}
-#google_translate_element{margin:10px 16px}
-.goog-te-banner-frame{display:none!important}body{top:0!important}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5">
+  <title>Kosmopoliet — Menukaart</title>
+  <meta name="theme-color" content="#1b1a1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="icon" type="image/png" href="icons/favicon-64.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="menu/menu.css">
 </head>
 <body>
-<header>
-  <img src="logo.png" alt="" width="46" height="46">
-  <div><h1 id="nm">Kosmopoliet</h1><p id="bl">plant based eetcafé - Brugge</p></div>
-  <button class="lang" id="lang" type="button" aria-label="Taal / Language">Taal / Language</button>
-</header>
-<div id="gt" hidden><div id="google_translate_element"></div></div>
-<p class="note">Deze kaart is om in te kijken. Bestellen doe je bij onze bediening.</p>
-<nav id="nav" aria-label="Categorieën"></nav>
-<main id="main"><p class="err" id="load">Kaart wordt geladen…</p></main>
-<footer id="ft"></footer>
-<script>
-(function () {
-  'use strict';
-  var state = { data: null, cat: null, stamp: '' };
-  function $(s) { return document.querySelector(s); }
-  function el(t, c, txt) { var e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e; }
-  function euro(n) { n = Number(n || 0); return '€ ' + (n % 1 === 0 ? String(n) : n.toFixed(2).replace('.', ',')); }
 
-  function render() {
-    var d = state.data; if (!d) return;
-    $('#nm').textContent = d.name || 'Kosmopoliet';
-    $('#bl').textContent = d.baseline || '';
-    $('#ft').textContent = d.disclaimer || '';
-    var cats = d.categories || [];
-    if (!cats.some(function (c) { return c.id === state.cat; })) state.cat = cats.length ? cats[0].id : null;
-    var nav = $('#nav'); nav.textContent = '';
-    cats.forEach(function (c) {
-      var b = el('button', c.id === state.cat ? 'on' : '', c.name); b.type = 'button';
-      b.addEventListener('click', function () { state.cat = c.id; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-      nav.appendChild(b);
-    });
-    var main = $('#main'); main.textContent = '';
-    var cat = cats.filter(function (c) { return c.id === state.cat; })[0];
-    if (!cat) { main.appendChild(el('p', 'err', 'Er staat nog geen kaart online.')); return; }
-    main.appendChild(el('h2', '', cat.name));
-    cat.items.forEach(function (it) {
-      var card = el('button', 'item'); card.type = 'button';
-      var row = el('div', 'row'); row.appendChild(el('h3', '', it.name));
-      var p = el('span', 'p');
-      if (it.promoPct > 0 && it.priceNow != null) { p.appendChild(el('s', '', euro(it.price))); p.appendChild(document.createTextNode(euro(it.priceNow))); }
-      else if (it.price > 0) p.textContent = euro(it.price);
-      row.appendChild(p); card.appendChild(row);
-      if (it.short) card.appendChild(el('p', 's', it.short));
-      var more = el('div', 'more');
-      if (it.long) more.appendChild(el('div', '', it.long));
-      if (it.extra) more.appendChild(el('div', 'x', it.extra));
-      var al = el('div', 'al');
-      if (it.allergens && it.allergens.length) it.allergens.forEach(function (a) { al.appendChild(el('span', '', a)); });
-      else al.appendChild(el('span', 'ask', 'Allergenen: vraag het onze bediening'));
-      more.appendChild(al); card.appendChild(more);
-      card.addEventListener('click', function () { card.classList.toggle('open'); });
-      main.appendChild(card);
-    });
-  }
+  <!-- Enkel de kaart, altijd zichtbaar — geen tafelnummer, geen mandje, geen bestelknop.
+       Voor online bezoekers van de website: bestellen kan enkel ter plaatse, via het
+       echte klantmenu (menu.html) met een geactiveerde tafel. -->
+  <section id="menu" class="show wm-readonly">
+    <div class="m-hero">
+      <div id="m-bg" class="m-bg"></div>
+      <div class="m-head">
+        <img id="m-logo" class="m-logo" src="assets/img/mark-gold.png" alt="logo">
+        <div class="m-title">
+          <h1 id="m-name">Kosmopoliet</h1>
+          <p id="m-baseline">plant based eetcafé - Brugge</p>
+        </div>
+        <div class="m-actions">
+          <button id="m-lang" class="lang-trigger" data-langfloat="1" aria-label="Taal / Language"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.7 3.8 9S14.5 18.5 12 21C9.5 18.5 8.2 15.3 8.2 12S9.5 5.5 12 3z"/></svg></button>
+        </div>
+      </div>
+    </div>
 
-  function load() {
-    return fetch('menu.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(function (j) { if (j.stamp !== state.stamp) { state.stamp = j.stamp; state.data = j; render(); } })
-      .catch(function () { if (!state.data) { var m = $('#main'); m.textContent = ''; m.appendChild(el('p', 'err', 'De kaart is nu niet bereikbaar. Vraag gerust een kaart aan onze bediening.')); } });
-  }
-  load();
-  setInterval(load, 180000);
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) load(); });
+    <p class="wm-note">Deze kaart is enkel om in te kijken. Bestellen kan ter plaatse, aan tafel.</p>
 
-  var gtLoaded = false;
-  window.googleTranslateElementInit = function () { try { new google.translate.TranslateElement({ pageLanguage: 'nl', autoDisplay: false }, 'google_translate_element'); } catch (e) {} };
-  $('#lang').addEventListener('click', function () {
-    $('#gt').hidden = !$('#gt').hidden;
-    if (!gtLoaded) { gtLoaded = true; var s = document.createElement('script'); s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit'; document.head.appendChild(s); }
-  });
-})();
-</script>
+    <div id="cat-bar" class="cat-bar"></div>
+    <div id="items" class="items"></div>
+  </section>
+
+  <!-- sheets -->
+  <div id="backdrop" class="sheet-backdrop"></div>
+
+  <div id="detail-sheet" class="sheet" role="dialog" aria-modal="true">
+    <div class="grip"></div>
+    <div class="sheet-inner">
+      <div id="detail-body"></div>
+      <div id="detail-foot" class="detail-foot"></div>
+    </div>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <div id="lang-float" class="lang-float">
+    <div class="lf-box">
+      <div class="lf-head"><span>Taal / Language</span><button class="lf-close" id="lf-close" aria-label="Sluiten">&#10005;</button></div>
+      <div class="lang-switch six"><button data-lang="nl" title="Nederlands"><svg viewBox="0 0 9 6" class="flag"><rect width="9" height="6" fill="#21468B"/><rect width="9" height="4" fill="#fff"/><rect width="9" height="2" fill="#AE1C28"/></svg></button><button data-lang="fr" title="Français"><svg viewBox="0 0 3 2" class="flag"><rect width="3" height="2" fill="#fff"/><rect width="1" height="2" fill="#0055A4"/><rect width="1" height="2" x="2" fill="#EF4135"/></svg></button><button data-lang="de" title="Deutsch"><svg viewBox="0 0 5 3" class="flag"><rect width="5" height="3" fill="#FFCE00"/><rect width="5" height="2" fill="#DD0000"/><rect width="5" height="1" fill="#000"/></svg></button><button data-lang="en" title="English"><svg viewBox="0 0 60 40" class="flag"><rect width="60" height="40" fill="#012169"/><path d="M0,0 L60,40 M60,0 L0,40" stroke="#fff" stroke-width="8"/><path d="M0,0 L60,40" stroke="#C8102E" stroke-width="4"/><path d="M60,0 L0,40" stroke="#C8102E" stroke-width="4"/><rect x="25" width="10" height="40" fill="#fff"/><rect y="15" width="60" height="10" fill="#fff"/><rect x="27" width="6" height="40" fill="#C8102E"/><rect y="17" width="60" height="6" fill="#C8102E"/></svg></button><button data-lang="es" title="Español"><svg viewBox="0 0 6 4" class="flag"><rect width="6" height="4" fill="#AA151B"/><rect width="6" height="2" y="1" fill="#F1BF00"/></svg></button><button data-lang="pt" title="Português"><svg viewBox="0 0 10 7" class="flag"><rect width="10" height="7" fill="#DA291C"/><rect width="4" height="7" fill="#046A38"/><circle cx="4" cy="3.5" r="1.1" fill="#FFE900" stroke="#DA291C" stroke-width="0.3"/></svg></button><button data-lang="ne" title="नेपाली"><svg viewBox="0 0 30 20" class="flag"><polygon points="4,2 24,7 10,10 22,16 4,18" fill="#DC143C" stroke="#003893" stroke-width="1.6" stroke-linejoin="round"/><g fill="#fff"><path d="M8.6 4.4a2.3 2.3 0 1 0 0 3.9 1.8 1.8 0 1 1 0-3.9z"/><circle cx="8.4" cy="12.7" r="1.8"/></g></svg></button></div>
+      <div class="lf-gt"><p class="lf-hint">Google Translate &mdash; meer talen (internet):</p><div id="google_translate_element"></div></div>
+    </div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="menu/gast-sync.js"></script>
+  <script src="menu/website-menu.js"></script>
+  <script src="js/i18n.js"></script>
 </body>
 </html>
