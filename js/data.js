@@ -2051,6 +2051,39 @@
     return { net: all.net, vat: round2(vat), gross: round2(gross), vatBase: round2(base), byRate: byRate, food: { net: round2(all.food ? all.food.net : 0) }, drink: { net: round2(all.drink ? all.drink.net : 0) },
       covers: all.covers, posNet: real.net, incomeNet: round2(all.net - real.net), incomeDays: i.days, overlapDays: i.overlapDays, flagged: i.flagged };
   }
+  /* Btw-aangifte (Belgisch periodiek formulier, roosters): uitgaande btw uit kassa + inkomstenoverzicht, aftrekbare btw uit inkoopfacturen + kasboek.
+       00/01/02/03 = omzet (maatstaf) tegen 0 / 6 / 12 / 21 %      54 = verschuldigde btw      59 = aftrekbare btw
+       81/82/83 = inkopen (maatstaf): goederen / diensten / investeringsgoederen      71 = te betalen, 72 = terug te vorderen
+     Goederen of diensten volgt de uitgavencategorie (VAT_SERVICE_CATS); dat is een benadering. Niet-aftrekbare regels (privé, restaurantkosten) tellen niet mee.
+     De btw uit het kasboek (spreadsheet) heeft geen grondslag en komt enkel in rooster 59. */
+  var VAT_SERVICE_CATS = ['Telecom & internet', 'Boekhouding & fiscaal advies', 'Sociaal secretariaat & HR-diensten', 'Software & abonnementen', 'Marketing & communicatie', 'Onderhoud, herstel & uitrusting',
+    'Auteursrechten & vergoedingen', 'Personeelskost – flexi & freelance', 'Transportkosten', 'Hygiëne & ongediertebestrijding', 'Overig / diverse diensten', 'Huur', 'Bank-, betaal- & terminalkosten'];
+  function vatReturn(from, to) {
+    var fin = financeReport(from, to), g = { '00': 0, '01': 0, '02': 0, '03': 0 }, other = 0, sales = {}, vatSales = 0;
+    Object.keys(fin.byRate).forEach(function (k) {
+      var b = fin.byRate[k], r = Number(k); sales[k] = { net: b.net, vat: b.vat, gross: b.gross }; vatSales += b.vat;
+      if (r === 0) g['00'] += b.net; else if (r === 6) g['01'] += b.net; else if (r === 12) g['02'] += b.net; else if (r === 21) g['03'] += b.net; else other += b.net;
+    });
+    var buy = {}, g81 = 0, g82 = 0, g83 = 0, vatDocs = 0, docs = 0, nonDeductBase = 0;
+    getActiveDocuments().forEach(function (d) {
+      if (d.type !== 'factuur') return;
+      var dt = String(d.date || ''); if (from && dt && dt < from) return; if (to && dt && dt > to) return;
+      docs++;
+      (d.lines || []).forEach(function (l) {
+        var r = docLineVat(l); if (!r.base) return;
+        if (r.private) { nonDeductBase += r.base; return; }
+        if (!(r.rate > 0)) return;
+        var o = buy[r.rate] || (buy[r.rate] = { base: 0, vat: 0 }); o.base += r.base; o.vat += r.vat; vatDocs += r.vat;
+        var def = l.category ? spendCatDef(l.category) : null;
+        if (def && def.asset) g83 += r.base; else if (def && VAT_SERVICE_CATS.indexOf(def.name) >= 0) g82 += r.base; else g81 += r.base;
+      });
+    });
+    Object.keys(buy).forEach(function (k) { buy[k].base = round2(buy[k].base); buy[k].vat = round2(buy[k].vat); });
+    var vatKb = ledgerVatIn(from, to), g54 = round2(vatSales), g59 = round2(vatDocs + vatKb), diff = round2(g54 - g59);
+    return { sales: sales, buy: buy, docs: docs, nonDeductBase: round2(nonDeductBase), vatKb: vatKb, vatDocs: round2(vatDocs), other: round2(other),
+      grids: { '00': round2(g['00']), '01': round2(g['01']), '02': round2(g['02']), '03': round2(g['03']), '54': g54, '59': g59, '81': round2(g81), '82': round2(g82), '83': round2(g83), '71': diff > 0 ? diff : 0, '72': diff < 0 ? -diff : 0 },
+      diff: diff, posNet: fin.posNet, incomeNet: fin.incomeNet, incomeDays: fin.incomeDays, flagged: fin.flagged };
+  }
   // Laatste dag waarvoor er omzet bekend is (kassa of overzicht).
   function lastRevenueDate() {
     var d = ''; getPayments().forEach(function (p) { var x = businessDate(p.at); if (x > d) d = x; });
@@ -2960,7 +2993,7 @@
     getAlias, getAliasPack, setAlias, getLineCat, setLineCat, SPEND_CATS, matchDocuments,
     getSpendCats, getSpendCatDefs, spendCatDef, spendCatIsFnb, addSpendCat, updateSpendCat, removeSpendCat,
     docArticles, applyMappingsToDocs, spendByCategory,
-    getActiveDocuments, spendCoverage, assetRegister, depreciation, lastRevenueDate, monthlyRevenue, breakEven, getIncome, importIncome, incomeSummary, financeReport, ledgerVatIn, getLedger, importLedger, updateLedgerEntry, setLedgerCell, vatPaidSummary, getRepayments, addRepayPlan, updateRepayPlan, removeRepayPlan, ledgerStatus, ledgerSpend, ledgerSummary, getDocInbox, setInboxStatus, matchSupplier, docFieldsFromExtraction, findDuplicateDoc, findDocIssues, markDuplicateDocs, getDocumentArchive,
+    getActiveDocuments, spendCoverage, assetRegister, depreciation, lastRevenueDate, monthlyRevenue, breakEven, getIncome, importIncome, incomeSummary, financeReport, ledgerVatIn, vatReturn, getLedger, importLedger, updateLedgerEntry, setLedgerCell, vatPaidSummary, getRepayments, addRepayPlan, updateRepayPlan, removeRepayPlan, ledgerStatus, ledgerSpend, ledgerSummary, getDocInbox, setInboxStatus, matchSupplier, docFieldsFromExtraction, findDuplicateDoc, findDocIssues, markDuplicateDocs, getDocumentArchive,
     getDocSettings, setDocSettings, retentionDate, isSummaryInvoice, suggestLevernotas, compareTotals, linkLevernotas,
     getBizModel, updateBizGroup, addBizGroup, removeBizGroup, businessModelReport, fnbSalesCost,
     purchaseVatFor, docLineVat, inputVatSummary,
