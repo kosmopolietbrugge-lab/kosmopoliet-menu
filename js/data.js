@@ -901,6 +901,7 @@
         if (!byRate[r]) byRate[r] = { gross: 0, net: 0, vat: 0 };
         byRate[r].gross += g; byRate[r].net += n; byRate[r].vat += g - n;
         var b = l.dest === 'bar' ? drink : food; b.qty += l.qty; b.gross += g; b.net += n;
+        if (p.synthetic) return; // dagomzet uit het overzicht: geen afzonderlijke items
         itemsCount += l.qty;
         var it = items[l.itemId] || (items[l.itemId] = { itemId: l.itemId, name: l.name, dest: l.dest, qty: 0, gross: 0 });
         it.qty += l.qty; it.gross += g;
@@ -917,7 +918,41 @@
   function businessDate(ms) { var d = new Date((ms == null ? Date.now() : ms) - DAY_CUTOFF_HOUR * 3600000); return _fmtDate(d); }
   function _dateKey(ms) { return businessDate(ms); }
   function _isTodayMs(ms) { return businessDate(ms) === businessDate(Date.now()); }
-  function paymentsInRange(startStr, endStr) { return getPayments().filter(function (p) { var bd = businessDate(p.at); return bd >= startStr && bd <= endStr; }); }
+  // Afrekeningen in een periode. Naast de echte afrekeningen van het OS komt er per dag uit het inkomstenoverzicht één
+  // samengestelde afrekening bij (synthetic: true; betaalwijze "inkomstenoverzicht") — maar enkel voor dagen waarop het OS zelf
+  // geen afrekeningen heeft. Zo werken alle rapporten (omzet, KPI, doelen, weken/kwartalen, weekdagen) met de echte omzet.
+  // Functies die op afzonderlijke verkopen steunen (uur, drankaanhechting, menu-engineering) vragen enkel de echte (realOnly).
+  function paymentsInRange(startStr, endStr, realOnly) {
+    var real = getPayments().filter(function (p) { var bd = businessDate(p.at); return bd >= startStr && bd <= endStr; });
+    if (realOnly) return real;
+    var inc = loadIncome(); if (!inc.days.length) return real;
+    var pos = {}; getPayments().forEach(function (p) { pos[businessDate(p.at)] = 1; });
+    var out = real.slice();
+    inc.days.forEach(function (d) { if (d.date < startStr || d.date > endStr || pos[d.date]) return; var p = _incomePayment(d); if (p) out.push(p); });
+    return out;
+  }
+  // Eén dag uit het inkomstenoverzicht als afrekening: per btw-tarief één regel (btw-bedrag volgens het overzicht); het netto-totaal van
+  // de dag blijft exact wat in het overzicht staat. Netto dat niet door een btw-rij gedekt is (ontbrekende rij), krijgt 12 % (voeding)
+  // of 21 % (dranken); is er meer btw-gedekt netto dan het dagtotaal, dan worden de regels evenredig verkleind.
+  function _incomePayment(d) {
+    if (!(d.net > 0)) return null;
+    var base = Object.keys(d.btw || {}).filter(function (r) { return Number(d.btw[r]) > 0 && Number(r) > 0; }).map(function (r) { return { r: Number(r), n: d.btw[r] / (Number(r) / 100) }; });
+    var sum = base.reduce(function (t, x) { return t + x.n; }, 0), resid = d.net - sum;
+    if (resid > 0.05) {
+      // het ontbrekende netto verdelen over drank (21 %) en eten (12 %), naar wat het overzicht per groep zegt
+      var n21 = base.filter(function (x) { return x.r === 21; }).reduce(function (t, x) { return t + x.n; }, 0), nFood = sum - n21;
+      var gapD = Math.max(0, (d.netDrink || 0) - n21), gapF = Math.max(0, (d.netFood || 0) - nFood), gt = gapD + gapF;
+      var addD = gt > 0 ? resid * gapD / gt : 0, addF = resid - addD;
+      var put = function (rate, n) { if (!(n > 0.005)) return; var hit = base.filter(function (x) { return x.r === rate; })[0]; if (hit) hit.n += n; else base.push({ r: rate, n: n }); };
+      put(21, addD); put(12, addF);
+    } else if (resid < -0.05 && sum > 0) { var k = d.net / sum; base.forEach(function (x) { x.n *= k; }); }
+    var lines = [], gross = 0, net = 0;
+    base.forEach(function (x) {
+      var g = x.n * (1 + x.r / 100); gross += g; net += x.n;
+      lines.push({ itemId: null, name: (x.r === 21 ? 'Dranken ' : 'Voeding ') + x.r + '%', qty: 1, price: g, vatRate: x.r, dest: x.r === 21 ? 'bar' : 'kitchen' });
+    });
+    return { id: 'inc-' + d.date, at: new Date(d.date + 'T12:00:00').getTime(), method: 'inkomstenoverzicht', synthetic: true, sessionId: 'inc-' + d.date, persons: d.klanten || 0, lines: lines, gross: round2(gross), net: round2(net), vat: round2(gross - net) };
+  }
   function dayReport(dateStr) { return computeReport(paymentsInRange(dateStr, dateStr)); }
   function rangeReport(startStr, endStr) { return computeReport(paymentsInRange(startStr, endStr)); }
   function getDayPayments() { var t = businessDate(Date.now()); return paymentsInRange(t, t); }
@@ -977,7 +1012,7 @@
   // ---- Business-analyses (afgeleid uit betalingen/orders) ----
   function getHourly(startStr, endStr) {
     var arr = []; for (var i = 0; i < 24; i++) arr.push({ hour: i, gross: 0, count: 0 });
-    paymentsInRange(startStr, endStr).forEach(function (p) { var h = new Date(p.at).getHours(); arr[h].gross += p.gross; arr[h].count++; });
+    paymentsInRange(startStr, endStr, true).forEach(function (p) { var h = new Date(p.at).getHours(); arr[h].gross += p.gross; arr[h].count++; });
     arr.forEach(function (a) { a.gross = round2(a.gross); }); return arr;
   }
   function getByWeekday(startStr, endStr) {
@@ -1050,7 +1085,14 @@
     function finish(x) {
       return { mixFoodcostPct: x.knownNet > 0 ? round2(x.knownCost / x.knownNet * 100) : null, coveragePct: x.groupNet > 0 ? round2(x.knownNet / x.groupNet * 100) : 0, knownNet: round2(x.knownNet), groupNet: round2(x.groupNet) };
     }
-    return { food: finish(g.food), drink: finish(g.drink) };
+    var res = { food: finish(g.food), drink: finish(g.drink) };
+    // Schatting uit inkoop ÷ omzet (per groep): wat je in de periode aan voeding/dranken aankocht tegenover wat je verkocht. Geen
+    // verbruik per gerecht, wel een bruikbare maatstaf zolang kaartrecepten en kassa niet gekoppeld zijn.
+    var sp = spendByCategory(startStr, endStr), rep2 = rangeReport(startStr, endStr);
+    var buyFood = sp['Voeding'] || 0, buyDrink = (sp['Dranken – alcoholisch'] || 0) + (sp['Dranken – non-alcoholisch & koffie'] || 0);
+    var fNet = rep2.food ? rep2.food.net : 0, dNet = rep2.drink ? rep2.drink.net : 0;
+    res.estimate = { foodPct: fNet > 0 && buyFood > 0 ? round2(buyFood / fNet * 100) : null, drinkPct: dNet > 0 && buyDrink > 0 ? round2(buyDrink / dNet * 100) : null, buyFood: round2(buyFood), buyDrink: round2(buyDrink), foodNet: round2(fNet), drinkNet: round2(dNet) };
+    return res;
   }
   function getPaymentMix(startStr, endStr) {
     var rep = rangeReport(startStr, endStr), total = rep.gross;
@@ -1064,7 +1106,7 @@
     return { discount: round2(disc), voidValue: round2(voidVal), voidCount: voidCount };
   }
   function getDrinkAttach(startStr, endStr) {
-    var sess = {}; paymentsInRange(startStr, endStr).forEach(function (p) { if (!p.sessionId) return; if (!sess[p.sessionId]) sess[p.sessionId] = false; p.lines.forEach(function (l) { if (l.dest === 'bar') sess[p.sessionId] = true; }); });
+    var sess = {}; paymentsInRange(startStr, endStr, true).forEach(function (p) { if (!p.sessionId) return; if (!sess[p.sessionId]) sess[p.sessionId] = false; p.lines.forEach(function (l) { if (l.dest === 'bar') sess[p.sessionId] = true; }); });
     var keys = Object.keys(sess), withD = keys.filter(function (k) { return sess[k]; }).length;
     return { sessions: keys.length, withDrink: withD, rate: keys.length ? round2(withD / keys.length * 100) : 0 };
   }
@@ -1243,7 +1285,7 @@
      anders dan een verkeerd wachtwoord en verdient een andere boodschap. */
   function authUser(name, pass) {
     return api('POST', '/auth/login', { name: name, pass: pass })
-      .then(function (r) { setSession(r.user); refreshUsers(); return r.user; })
+      .then(function (r) { setSession(r.user); refreshUsers(); try { if (window.KosmoSync && window.KosmoSync.restart) window.KosmoSync.restart(); } catch (e) {} return r.user; })
       .catch(function (e) { if (e.status === 401) return null; throw e; });
   }
 
@@ -1635,6 +1677,9 @@
     { name: 'Kleine aankopen (eenmalig)', vat: 21, fnb: false },
     { name: 'Investering – IT & kleine elektronica', vat: 21, fnb: false, asset: true, years: 3 }, // afschrijving, pro rata vanaf aankoopdatum
     { name: 'Investering – apparatuur & uitrusting', vat: 21, fnb: false, asset: true, years: 5 },
+    { name: 'Lonen & maaltijdcheques', vat: 0, fnb: false, personnel: true },
+    { name: 'Sociale lasten, vakantiegeld & personeelsverzekering', vat: 0, fnb: false, personnel: true },
+    { name: 'Afbetalingen & leningen', vat: 0, fnb: false },
     { name: 'Overig / diverse diensten', vat: 21, fnb: false }
   ];
   var SPENDCATSKEY = 'kosmo-spendcats-v1';
@@ -1769,7 +1814,277 @@
     });
     var dep = depreciation(from, to);
     if (dep.total > 0) out['Afschrijvingen (investeringen)'] = round2(dep.total);
+    var lg = ledgerSpend(from, to); Object.keys(lg).forEach(function (c) { out[c] = round2((out[c] || 0) + lg[c]); });
     return out;
+  }
+
+  /* ---------- Kasboek: werkelijke uitgaven uit de spreadsheet van de zaak (zie tools/import-kasboek.js) ----------
+     Elke regel is een maandbedrag (excl. btw) van een leverancier of loonpost. De OS heeft zelf facturen vanaf mei 2026;
+     het kasboek vult de periodes en posten aan waar nog geen factuur in zit (januari–april 2026, loonkosten 2025,
+     vaste maandbedragen zoals huur en lening). Overlap met facturen in het OS wordt NIET dubbel geteld: zie ledgerStatus.
+       'kost'   = werkelijk uitgegeven. Telt niet mee voor zover het OS in dezelfde maand al facturen van dezelfde
+                  leverancier heeft (verschil telt wel), of een factuur met exact hetzelfde bedrag (±3 maanden).
+       'raming' = vaststaand maandbedrag voor latere maanden. Telt enkel tot vandaag en enkel als het OS GEEN facturen
+                  van die leverancier heeft. */
+  var LEDGERKEY = 'kosmo-ledger-v1';
+  var LEDGER_CAT_NAMES = ['Lonen & maaltijdcheques', 'Sociale lasten, vakantiegeld & personeelsverzekering', 'Afbetalingen & leningen'];
+  function loadLedger() { try { return JSON.parse(localStorage.getItem(LEDGERKEY) || '[]'); } catch (e) { return []; } }
+  function saveLedger(l) { try { localStorage.setItem(LEDGERKEY, JSON.stringify(l)); } catch (e) {} broadcast('ledger'); try { emit('data'); } catch (e) {} }
+  function getLedger() { return loadLedger(); }
+  // Voegt nieuwe regels toe (bestaande blijven staan, ook met je eigen aanpassingen). Maakt ontbrekende categorieën aan.
+  // opts.supersede = { labels:[...], fromMonth:'YYYY-MM', note } : bestaande RAMINGEN van die posten vanaf die maand worden "vervangen"
+  // (ze tellen niet meer mee, blijven wel zichtbaar). Zo kunnen werkelijke bedragen een eerdere schatting vervangen zonder dubbel te tellen.
+  function importLedger(entries, opts) {
+    var cur = loadLedger(), byId = {}; cur.forEach(function (e) { byId[e.id] = e; });
+    var added = 0; (entries || []).forEach(function (e) { if (e && e.id && !byId[e.id]) { cur.push(e); byId[e.id] = e; added++; } });
+    var sup = opts && opts.supersede, superseded = 0;
+    if (sup && sup.labels) {
+      var keys = sup.labels.map(_lnorm), fresh = {}; (entries || []).forEach(function (e) { if (e && e.id) fresh[e.id] = 1; });
+      cur.forEach(function (e) {
+        if (e.kind === 'raming' && !fresh[e.id] && !e.superseded && e.month >= (sup.fromMonth || '0000-00') && keys.indexOf(_lnorm(e.label)) >= 0) { e.superseded = sup.note || 'vervangen door werkelijke bedragen'; superseded++; }
+      });
+    }
+    var defs = loadSpendCatDefs(), changed = false;
+    SPEND_CATS_SEED.filter(function (c) { return LEDGER_CAT_NAMES.indexOf(c.name) >= 0; }).forEach(function (c) { if (!defs.some(function (x) { return x.name === c.name; })) { defs.push(Object.assign({}, c)); changed = true; } });
+    if (changed) saveSpendCatDefs(defs);
+    saveLedger(cur); return { added: added, superseded: superseded, total: cur.length };
+  }
+  function updateLedgerEntry(id, patch) { var l = loadLedger(), e = l.filter(function (x) { return x.id === id; })[0]; if (e) { if (patch.category != null) e.category = patch.category; if (patch.excluded != null) e.excluded = !!patch.excluded; saveLedger(l); } return e || null; }
+  // Zet het bedrag van één post in één maand (bv. "Loon Magno", 2026-11). Bestaat de regel, dan wordt die aangepast; anders komt er een nieuwe
+  // (werkelijk als de maand al begonnen is, anders een raming). Bedrag 0 of leeg = regel blijft bestaan maar telt niet.
+  function setLedgerCell(label, category, month, amount, section) {
+    var l = loadLedger(), k = _lnorm(label), v = round2(Number(amount) || 0);
+    var e = l.filter(function (x) { return !x.superseded && x.category === category && x.month === month && _lnorm(x.label) === k; })[0];
+    if (e) { e.amount = v; if (e.excluded && v > 0) e.excluded = false; }
+    else {
+      if (!v) return null;
+      e = { id: 'kb' + uid('h'), month: month, label: label, category: category, amount: v, kind: month > todayStr().slice(0, 7) ? 'raming' : 'kost', section: section || 'handmatig', note: '', source: 'handmatig' };
+      l.push(e);
+    }
+    saveLedger(l); return e;
+  }
+  function _lnorm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ''); }
+  // Namen in de spreadsheet die anders heten dan op de factuur.
+  var LEDGER_ALIAS = { engie: ['electrabel', 'engie'], abertheijn: ['albertheijn'], belgianfreshfood: ['belgianfreshfood', 'claessens'], colruytfoodretail: ['colruyt'], cto: ['cto'], liantissocialsecretariaat: ['liantis'], loonmagno: ['magnivaldo'], pluxee: ['pluxee'], knokkeiced: ['knokke'], allbeansnobreaks: ['allbeans'], stuyts: ['stuyts'], horecatotaal: ['horecatotaal'] };
+  function _sameParty(label, supName) {
+    var a = _lnorm(label), b = _lnorm(supName); if (!a || !b) return false;
+    if (a.length >= 4 && (b.indexOf(a) >= 0 || a.indexOf(b) >= 0)) return true;
+    var al = LEDGER_ALIAS[a]; return !!al && al.some(function (x) { return b.indexOf(x) >= 0; });
+  }
+  function _monthDiff(a, b) { return (+a.slice(0, 4) - +b.slice(0, 4)) * 12 + (+a.slice(5, 7) - +b.slice(5, 7)); }
+  function _lastDay(month) { var y = +month.slice(0, 4), m = +month.slice(5, 7); return month + '-' + String(new Date(y, m, 0).getDate()).padStart(2, '0'); }
+  function _ldDays(a, b) { return Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 86400000) + 1; }
+  // Per kasboekregel: telt hij mee, en voor welk deel? status: telt | geraamd | deels | overlap | uitgesloten
+  //  1) 'kost' met hetzelfde bedrag als een factuur (±3 maanden)       -> overlap (die factuur is dan "verbruikt")
+  //  2) 'kost' van een leverancier waarvan het OS facturen heeft        -> per leverancier over de hele periode van het
+  //     kasboek vergeleken (facturen en boekingen schuiven vaak een maand op): enkel het verschil telt
+  //  3) 'raming'                                                          -> vervalt voor maanden (±1) waarvoor het OS facturen
+  //     van die leverancier heeft; afbetalingen van oude schulden (Engie, Farys, Horeca Totaal, RSZ) vervallen nooit
+  function ledgerStatus() {
+    var sup = {}; loadSuppliers().forEach(function (s) { sup[s.id] = s.name; });
+    var docs = getActiveDocuments().filter(function (d) { return d.type === 'factuur' && d.date; }).map(function (d) { return { sup: sup[d.supplierId] || '', date: d.date, month: d.date.slice(0, 7), eur: docTotal(d), ref: d.ref, used: false }; });
+    var res = loadLedger().map(function (e) { return { id: e.id, entry: e, status: 'telt', factor: 1, reason: '', ref: '' }; });
+    var kost = [];
+    res.forEach(function (r) {
+      var e = r.entry;
+      if (e.excluded) { r.status = 'uitgesloten'; r.factor = 0; r.reason = 'door jou uitgesloten'; return; }
+      if (e.superseded) { r.status = 'overlap'; r.factor = 0; r.reason = String(e.superseded); return; }
+      if (e.kind === 'raming') {
+        var repay = /afbetaling/.test(e.note || '') && !/microlease/i.test(e.label);
+        var near = repay ? [] : docs.filter(function (d) { return d.date >= '2026-05-01' && Math.abs(_monthDiff(d.month, e.month)) <= 1 && _sameParty(e.label, d.sup); });
+        if (near.length) { r.status = 'overlap'; r.factor = 0; r.reason = 'het OS heeft facturen van deze leverancier rond die maand (de raming vervalt)'; r.ref = near[0].ref; }
+        else r.status = 'geraamd';
+        return;
+      }
+      if (e.amount <= 0) return;
+      var hit = e.amount >= 20 ? docs.filter(function (d) { return !d.used && Math.abs(d.eur - e.amount) <= 0.02 && Math.abs(_monthDiff(d.month, e.month)) <= 3 && (_sameParty(e.label, d.sup) || e.amount >= 100); })[0] : null;
+      if (hit) { hit.used = true; r.status = 'overlap'; r.factor = 0; r.reason = 'zelfde bedrag als factuur ' + hit.ref; r.ref = hit.ref; return; }
+      kost.push(r);
+    });
+    // per leverancier (genormaliseerd label): facturen binnen de periode van de kasboekregels tegenover het kasboekbedrag
+    var groups = {};
+    kost.forEach(function (r) { var k = _lnorm(r.entry.label); (groups[k] = groups[k] || []).push(r); });
+    Object.keys(groups).forEach(function (k) {
+      var g = groups[k], months = g.map(function (r) { return r.entry.month; }).sort(), lo = months[0] + '-01', hi = _lastDay(months[months.length - 1]);
+      var mine = docs.filter(function (d) { return !d.used && d.date >= lo && d.date <= hi && _sameParty(g[0].entry.label, d.sup); });
+      var os = mine.reduce(function (s, d) { return s + d.eur; }, 0); if (os <= 0) return;
+      var led = g.reduce(function (s, r) { return s + r.entry.amount; }, 0);
+      var f = os >= led - 0.5 ? 0 : (led - os) / led;
+      g.forEach(function (r) {
+        r.factor = f; r.ref = mine[0].ref;
+        if (f === 0) { r.status = 'overlap'; r.reason = 'het OS heeft in die periode al ' + round2(os) + ' aan facturen van deze leverancier'; }
+        else { r.status = 'deels'; r.reason = 'het OS heeft in die periode al ' + round2(os) + ' van de ' + round2(led) + ' van deze leverancier: enkel het verschil telt'; }
+      });
+    });
+    return res;
+  }
+  // Aandeel van een regel dat binnen [from, to] valt (naar dagen); ramingen tellen enkel tot vandaag.
+  function _ledgerFraction(e, from, to) {
+    var ms = e.month + '-01', me = _lastDay(e.month), today = todayStr();
+    if (e.kind === 'raming' && ms > today) return 0;
+    var lo = from && from > ms ? from : ms, hi = me;
+    if (to && to < hi) hi = to;
+    if (e.kind === 'raming' && today < hi) hi = today;
+    if (hi < lo) return 0;
+    return _ldDays(lo, hi) / _ldDays(ms, me);
+  }
+  function ledgerSpend(from, to) {
+    var out = {};
+    ledgerStatus().forEach(function (s) { if (s.factor <= 0) return; var f = _ledgerFraction(s.entry, from, to); if (f <= 0) return; out[s.entry.category] = (out[s.entry.category] || 0) + s.entry.amount * s.factor * f; });
+    Object.keys(out).forEach(function (c) { out[c] = round2(out[c]); });
+    return out;
+  }
+  // Overzicht voor het scherm: hoeveel telt mee, hoeveel is geraamd, hoeveel is overlap (niet dubbel geteld) of uitgesloten.
+  function ledgerSummary(from, to) {
+    var sum = { counted: 0, estimated: 0, overlap: 0, excluded: 0, rows: 0 };
+    ledgerStatus().forEach(function (s) {
+      var f = _ledgerFraction(s.entry, from, to); if (f <= 0) return; sum.rows++;
+      var a = s.entry.amount * f;
+      if (s.status === 'uitgesloten') sum.excluded += a;
+      else if (s.status === 'overlap') sum.overlap += a;
+      else { var c = a * s.factor; if (s.entry.kind === 'raming') sum.estimated += c; else sum.counted += c; sum.overlap += a - c; }
+    });
+    Object.keys(sum).forEach(function (k) { if (k !== 'rows') sum[k] = round2(sum[k]); });
+    return sum;
+  }
+
+  /* ---------- Inkomsten: werkelijke omzet per dag uit het inkomstenoverzicht (zie tools/import-inkomsten.js) ----------
+     De kassa in het OS draait nog niet voor de hele zaak; het overzicht bevat de echte dagomzet (netto, bruto, btw per tarief,
+     klanten). Een dag waarop het OS zélf afrekeningen heeft, telt NIET uit het overzicht (anders dubbel). Daarnaast staat hier
+     de aftrekbare btw op uitgaven uit de spreadsheet (vatIn, januari–april), voor zover er nog geen facturen in het OS zijn. */
+  var INCOMEKEY = 'kosmo-income-v1';
+  function loadIncome() { try { var o = JSON.parse(localStorage.getItem(INCOMEKEY) || 'null'); if (o && o.days) { if (!o.vatIn) o.vatIn = []; if (!o.vatPaid) o.vatPaid = []; return o; } } catch (e) {} return { days: [], vatIn: [], vatPaid: [] }; }
+  function saveIncome(o) { try { localStorage.setItem(INCOMEKEY, JSON.stringify(o)); } catch (e) {} broadcast('income'); try { emit('data'); } catch (e) {} }
+  function getIncome() { return loadIncome(); }
+  function importIncome(payload) {
+    var cur = loadIncome(), by = {}, vb = {};
+    cur.days.forEach(function (d) { by[d.date] = d; }); ((payload && payload.days) || []).forEach(function (d) { if (d && d.date) by[d.date] = d; });
+    cur.days = Object.keys(by).sort().map(function (k) { return by[k]; });
+    cur.vatIn.forEach(function (v) { vb[v.month] = v; }); ((payload && payload.vatIn) || []).forEach(function (v) { if (v && v.month) vb[v.month] = v; });
+    cur.vatIn = Object.keys(vb).sort().map(function (k) { return vb[k]; });
+    var pb = {}; cur.vatPaid.forEach(function (v) { pb[v.month] = v; }); ((payload && payload.vatPaid) || []).forEach(function (v) { if (v && v.month) pb[v.month] = v; });
+    cur.vatPaid = Object.keys(pb).sort().map(function (k) { return pb[k]; });
+    saveIncome(cur); return { days: cur.days.length, vatIn: cur.vatIn.length, vatPaid: cur.vatPaid.length };
+  }
+  // Btw die al aan de fiscus betaald is (maandbedragen uit de spreadsheet); een maand telt mee zodra ze de gekozen periode raakt.
+  function vatPaidSummary(from, to) {
+    var out = { total: 0, months: [] };
+    loadIncome().vatPaid.forEach(function (v) {
+      if (from && _lastDay(v.month) < from) return; if (to && v.month + '-01' > to) return;
+      out.total += v.amount; out.months.push({ month: v.month, amount: v.amount });
+    });
+    out.total = round2(out.total); return out;
+  }
+  /* ---- Afbetalingen (kosmo-repay-v1) ----
+     De betaalde/geplande bedragen zelf staan in het kasboek (categorie "Afbetalingen & leningen"), zodat ze meteen in het bedrijfsmodel en de boekhouding meetellen.
+     Hier staat enkel wat een afbetalingsplan extra nodig heeft: het openstaande totaal bij de start, zodat het saldo berekend kan worden. */
+  var REPAYKEY = 'kosmo-repay-v1', REPAY_CAT = 'Afbetalingen & leningen';
+  function loadRepay() { try { var o = JSON.parse(localStorage.getItem(REPAYKEY) || 'null'); if (o && o.plans) return o; } catch (e) {} return { plans: [] }; }
+  function saveRepay(o) { try { localStorage.setItem(REPAYKEY, JSON.stringify(o)); } catch (e) {} broadcast('repay'); try { emit('data'); } catch (e) {} }
+  // Elke schuldeiser uit het kasboek (en elk plan) als rij met een bedrag per maand, het openstaande totaal en het saldo.
+  function getRepayments(year) {
+    year = year || +todayStr().slice(0, 4);
+    var cur = todayStr().slice(0, 7), rep = loadRepay(), by = {}, order = [];
+    var get = function (name) { var k = _lnorm(name); if (!by[k]) { by[k] = { key: k, creditor: name, plan: null, months: {}, paid: 0, planned: 0, paidAll: 0 }; order.push(k); } return by[k]; };
+    rep.plans.forEach(function (p) { get(p.creditor).plan = p; });
+    loadLedger().forEach(function (e) {
+      if (e.category !== REPAY_CAT || e.superseded) return;
+      var r = get(e.label), mo = e.month, amt = e.excluded ? 0 : e.amount;
+      if (!r.months[mo]) r.months[mo] = { amount: 0, kind: e.kind, id: e.id };
+      r.months[mo].amount += amt; if (e.kind === 'kost') r.months[mo].kind = 'kost';
+      if (e.kind === 'kost' || mo <= cur) { if (!r.plan || !r.plan.start || mo >= r.plan.start) r.paidAll += amt; } else if (!r.plan || !r.plan.start || mo >= r.plan.start) r.planned += amt;
+      if (mo.slice(0, 4) === String(year) && (e.kind === 'kost' || mo <= cur)) r.paid += amt;
+    });
+    return order.map(function (k) {
+      var r = by[k], p = r.plan, total = p && p.total != null && p.total !== '' ? Number(p.total) : null;
+      r.total = total; r.balance = total == null ? null : round2(Math.max(0, total - r.paidAll)); r.paid = round2(r.paid); r.paidAll = round2(r.paidAll); r.planned = round2(r.planned);
+      r.id = p ? p.id : null; return r;
+    }).sort(function (a, b) { return a.creditor.localeCompare(b.creditor); });
+  }
+  // Nieuw plan: naam, openstaand totaal (mag leeg), maandbedrag en aantal maanden vanaf een startmaand worden meteen als ramingen in het kasboek gezet.
+  function addRepayPlan(o) {
+    var name = String(o && o.creditor || '').trim(); if (!name) return null;
+    var rep = loadRepay(), p = rep.plans.filter(function (x) { return _lnorm(x.creditor) === _lnorm(name); })[0];
+    if (!p) { p = { id: uid('rp'), creditor: name }; rep.plans.push(p); }
+    p.total = o.total === '' || o.total == null ? null : round2(Number(o.total)); p.start = o.start || p.start || null; p.note = o.note || p.note || '';
+    saveRepay(rep);
+    var n = Math.min(60, Math.max(0, Math.floor(Number(o.months) || 0))), amt = Number(o.monthly) || 0;
+    if (n && amt > 0 && /^\d{4}-\d{2}$/.test(o.start || '')) {
+      var y = +o.start.slice(0, 4), m = +o.start.slice(5, 7);
+      for (var i = 0; i < n; i++) { var mm = y + '-' + String(m).padStart(2, '0'); setLedgerCell(name, REPAY_CAT, mm, amt, 'afbetalingen'); m++; if (m > 12) { m = 1; y++; } }
+    }
+    return p;
+  }
+  function updateRepayPlan(creditor, patch) {
+    var rep = loadRepay(), k = _lnorm(creditor), p = rep.plans.filter(function (x) { return _lnorm(x.creditor) === k; })[0];
+    if (!p) { p = { id: uid('rp'), creditor: creditor }; rep.plans.push(p); }
+    if ('total' in patch) p.total = patch.total === '' || patch.total == null ? null : round2(Number(patch.total));
+    if ('start' in patch) p.start = patch.start || null;
+    if ('note' in patch) p.note = patch.note || '';
+    saveRepay(rep); return p;
+  }
+  function removeRepayPlan(creditor) { var rep = loadRepay(), k = _lnorm(creditor); rep.plans = rep.plans.filter(function (x) { return _lnorm(x.creditor) !== k; }); saveRepay(rep); }
+  function _posDaySet() { var s = {}; getPayments().forEach(function (p) { s[businessDate(p.at)] = 1; }); return s; }
+  function incomeSummary(from, to) {
+    var inc = loadIncome(), pos = _posDaySet();
+    var o = { net: 0, vat: 0, food: 0, drink: 0, covers: 0, days: 0, overlapDays: 0, flagged: 0, byRate: {} };
+    inc.days.forEach(function (d) {
+      if (from && d.date < from) return; if (to && d.date > to) return;
+      if (pos[d.date]) { o.overlapDays++; return; }
+      o.days++; o.net += d.net || 0; o.food += d.netFood || 0; o.drink += d.netDrink || 0; o.covers += d.klanten || 0; if (d.flags && d.flags.length) o.flagged++;
+      Object.keys(d.btw || {}).forEach(function (r) {
+        var v = d.btw[r], n = v / (Number(r) / 100), b = o.byRate[r] || (o.byRate[r] = { gross: 0, net: 0, vat: 0 });
+        b.vat += v; b.net += n; b.gross += n + v; o.vat += v;
+      });
+    });
+    ['net', 'vat', 'food', 'drink'].forEach(function (k) { o[k] = round2(o[k]); });
+    Object.keys(o.byRate).forEach(function (r) { var b = o.byRate[r]; b.vat = round2(b.vat); b.net = round2(b.net); b.gross = round2(b.gross); });
+    return o;
+  }
+  // Omzet uit alle bronnen (kassa van het OS + inkomstenoverzicht), met herkomst. Gebruikt door boekhouding, btw en bedrijfsmodel.
+  function financeReport(from, to) {
+    var all = rangeReport(from, to), real = computeReport(paymentsInRange(from, to, true)), i = incomeSummary(from, to), byRate = {}, base = 0, vat = 0, gross = 0;
+    // Btw: de echte afrekeningen van het OS + de btw-bedragen zoals ze in het inkomstenoverzicht staan (niet teruggerekend uit het netto-bedrag).
+    Object.keys(real.byRate || {}).forEach(function (k) { byRate[k] = { gross: real.byRate[k].gross || 0, net: real.byRate[k].net || 0, vat: real.byRate[k].vat || 0 }; });
+    Object.keys(i.byRate).forEach(function (k) { var b = byRate[k] || (byRate[k] = { gross: 0, net: 0, vat: 0 }); b.gross += i.byRate[k].gross; b.net += i.byRate[k].net; b.vat += i.byRate[k].vat; });
+    Object.keys(byRate).forEach(function (k) { var b = byRate[k]; b.gross = round2(b.gross); b.net = round2(b.net); b.vat = round2(b.vat); base += b.net; vat += b.vat; gross += b.gross; });
+    return { net: all.net, vat: round2(vat), gross: round2(gross), vatBase: round2(base), byRate: byRate, food: { net: round2(all.food ? all.food.net : 0) }, drink: { net: round2(all.drink ? all.drink.net : 0) },
+      covers: all.covers, posNet: real.net, incomeNet: round2(all.net - real.net), incomeDays: i.days, overlapDays: i.overlapDays, flagged: i.flagged };
+  }
+  // Laatste dag waarvoor er omzet bekend is (kassa of overzicht).
+  function lastRevenueDate() {
+    var d = ''; getPayments().forEach(function (p) { var x = businessDate(p.at); if (x > d) d = x; });
+    loadIncome().days.forEach(function (x) { if (x.net > 0 && x.date > d) d = x.date; });
+    return d;
+  }
+  // Omzet per maand (netto, btw, klanten) uit alle bronnen.
+  function monthlyRevenue(from, to) {
+    var by = {};
+    paymentsInRange(from, to).forEach(function (p) { var m = businessDate(p.at).slice(0, 7), o = by[m] || (by[m] = { month: m, net: 0, vat: 0, gross: 0, covers: 0, days: {}, source: {} }); o.net += p.net; o.vat += p.vat != null ? p.vat : p.gross - p.net; o.gross += p.gross; o.covers += p.persons || 0; o.days[businessDate(p.at)] = 1; o.source[p.synthetic ? 'overzicht' : 'kassa'] = 1; });
+    return Object.keys(by).sort().map(function (m) { var o = by[m]; return { month: m, net: round2(o.net), vat: round2(o.vat), gross: round2(o.gross), covers: o.covers, days: Object.keys(o.days).length, avgPerCover: o.covers ? round2(o.gross / o.covers) : 0, sources: Object.keys(o.source) }; });
+  }
+  // Break-even uit de boekhouding: vaste lasten (personeel + vaste kosten) tegenover het deel van de omzet dat overblijft na de
+  // omzetgebonden kosten (F&B + variabele kosten). Gebaseerd op de periode die je kiest.
+  function breakEven(from, to) {
+    var rep = businessModelReport(from, to), g = {};
+    rep.groups.forEach(function (x) { g[x.id] = x; });
+    var fixed = (g.personeel ? g.personeel.actual : 0) + (g.vast ? g.vast.actual : 0) + (rep.uncategorized || 0);
+    var variable = (g.fnb ? g.fnb.actual : 0) + (g.variabel ? g.variabel.actual : 0);
+    var net = rep.net, margin = net > 0 ? 1 - variable / net : 0;
+    var months = Math.max(1, (new Date(to + 'T12:00:00') - new Date(from + 'T12:00:00')) / 86400000 + 1) / 30.4375;
+    var beNet = margin > 0 ? fixed / margin : null;
+    return { net: round2(net), fixed: round2(fixed), variable: round2(variable), marginPct: round2(margin * 100), months: round2(months), breakEvenNet: beNet != null ? round2(beNet) : null, breakEvenPerMonth: beNet != null ? round2(beNet / months) : null, netPerMonth: round2(net / months), result: round2(net - fixed - variable), assumed: rep.netAssumed };
+  }
+  // Aftrekbare btw op uitgaven uit de spreadsheet (maandbedragen): enkel wat nog niet in de facturen van het OS zit.
+  function ledgerVatIn(from, to) {
+    var t = 0;
+    loadIncome().vatIn.forEach(function (v) {
+      var ms = v.month + '-01', me = _lastDay(v.month), lo = from && from > ms ? from : ms, hi = to && to < me ? to : me;
+      if (hi < lo) return;
+      var f = _ldDays(lo, hi) / _ldDays(ms, me), docVat = inputVatSummary(ms, me).total;
+      t += Math.max(0, v.amount - docVat) * f;
+    });
+    return round2(t);
   }
   // Investeringsregister: regels in een categorie met asset:true worden over de jaren afgeschreven (lineair, pro rata
   // per dag vanaf de factuurdatum). Eenmalige kosten (boeken, kleine aankopen) kies je als gewone categorie.
@@ -1874,19 +2189,58 @@
      Groepen zijn toevoegbaar/instelbaar; categorieën wijs je aan een groep toe.
      ============================================================ */
   var BIZKEY = 'kosmo-bizmodel-v1';
+  // Indeling van de uitgavencategorieën in de hoofdgroepen van het model. 'Vast' = kosten die periodiek vastliggen
+  // (huur, abonnementen, verzekeringen, boekhouder, afschrijving). 'Variabel' = alles wat uitzonderlijk is of
+  // periodiek verandert (energie, onderhoud, transport, marketing, kleine aankopen, belastingen, ...). Elke
+  // categorie hoort in precies één groep; je kan ze verplaatsen via "Categorieën aanpassen".
+  var BIZ_PERS = ['Sociaal secretariaat & HR-diensten', 'Personeelskost – flexi & freelance', 'Lonen & maaltijdcheques', 'Sociale lasten, vakantiegeld & personeelsverzekering'];
+  var BIZ_FNB = ['Voeding', 'Dranken – alcoholisch', 'Dranken – non-alcoholisch & koffie', 'Voordeel van alle aard'];
+  var BIZ_VAST = ['Huur', 'Verzekeringen', 'Telecom & internet', 'Boekhouding & fiscaal advies', 'Software & abonnementen', 'Afschrijvingen (investeringen)', 'Afbetalingen & leningen'];
   function _bizSeed() {
-    var skip = ['Voeding', 'Dranken – alcoholisch', 'Dranken – non-alcoholisch & koffie', 'Sociaal secretariaat & HR-diensten', 'Personeelskost – flexi & freelance'];
-    var overhead = loadSpendCatDefs().filter(function (c) { return skip.indexOf(c.name) < 0 && !c.asset; }).map(function (c) { return c.name; }).concat(['Afschrijvingen (investeringen)']);
+    var skip = BIZ_FNB.concat(BIZ_PERS);
+    var rest = loadSpendCatDefs().filter(function (c) { return skip.indexOf(c.name) < 0 && !c.asset; }).map(function (c) { return c.name; }).concat(['Afschrijvingen (investeringen)']);
     return { groups: [
-      { id: 'personeel', name: 'Personeelskost', kind: 'personeel', targetPct: 38, categories: ['Sociaal secretariaat & HR-diensten', 'Personeelskost – flexi & freelance'] },
-      { id: 'fnb', name: 'F&B-kost', kind: 'fnb', targetPct: 20, categories: [] },
-      { id: 'vast', name: 'Vaste & variabele kosten', kind: 'spend', targetPct: 30, categories: overhead },
+      { id: 'personeel', name: 'Personeelskost', kind: 'personeel', targetPct: 38, categories: BIZ_PERS.slice() },
+      { id: 'fnb', name: 'F&B-kost', kind: 'fnb', targetPct: 20, categories: BIZ_FNB.slice() },
+      { id: 'vast', name: 'Vaste kosten', kind: 'spend', targetPct: 18, categories: rest.filter(function (c) { return BIZ_VAST.indexOf(c) >= 0; }) },
+      { id: 'variabel', name: 'Variabele kosten', kind: 'spend', targetPct: 12, categories: rest.filter(function (c) { return BIZ_VAST.indexOf(c) < 0; }) },
       { id: 'winst', name: 'Bedrijfswinst vóór belasting', kind: 'profit', targetPct: 12, categories: [] }
     ] };
   }
-  function getBizModel() { try { var m = JSON.parse(localStorage.getItem(BIZKEY) || 'null'); if (m && m.groups && m.groups.length) return m; } catch (e) {} return _bizSeed(); }
+  // Oudere modellen (v0.70 en vroeger): "Vaste & variabele kosten" splitsen en F&B op inkoop-categorieën zetten.
+  var _bizMigrated = false;
+  function _migrateBiz(m) {
+    var changed = false;
+    var vast = m.groups.filter(function (g) { return g.id === 'vast'; })[0];
+    if (vast && !m.groups.some(function (g) { return g.id === 'variabel'; })) {
+      var v = [], x = [];
+      (vast.categories || []).forEach(function (c) { (BIZ_VAST.indexOf(c) >= 0 ? v : x).push(c); });
+      var t = Number(vast.targetPct) || 0, tv = Math.round(t * 0.6);
+      vast.name = 'Vaste kosten'; vast.categories = v; vast.targetPct = tv;
+      m.groups.splice(m.groups.indexOf(vast) + 1, 0, { id: 'variabel', name: 'Variabele kosten', kind: 'spend', targetPct: t - tv, categories: x });
+      changed = true;
+    }
+    // nieuwe vaste categorieën (bv. uit het kasboek) die in geen enkele groep staan, in hun standaardgroep zetten
+    [['personeel', BIZ_PERS], ['vast', BIZ_VAST]].forEach(function (p) {
+      var g = m.groups.filter(function (x) { return x.id === p[0]; })[0]; if (!g) return;
+      p[1].forEach(function (c) { if (!m.groups.some(function (o) { return (o.categories || []).indexOf(c) >= 0; })) { (g.categories = g.categories || []).push(c); changed = true; } });
+    });
+    var fnb = m.groups.filter(function (g) { return g.kind === 'fnb'; })[0];
+    if (fnb && fnb.basis !== 'inkoop' && !(fnb.categories || []).length) { fnb.categories = BIZ_FNB.slice(); fnb.basis = 'inkoop'; changed = true; }
+    return changed;
+  }
+  function getBizModel() {
+    try {
+      var m = JSON.parse(localStorage.getItem(BIZKEY) || 'null');
+      if (m && m.groups && m.groups.length) {
+        if (_migrateBiz(m) && !_bizMigrated) { _bizMigrated = true; saveBizModel(m); }
+        return m;
+      }
+    } catch (e) {}
+    return _bizSeed();
+  }
   function saveBizModel(m) { try { localStorage.setItem(BIZKEY, JSON.stringify(m)); } catch (e) {} broadcast('bizmodel'); }
-  function updateBizGroup(id, patch) { var m = getBizModel(); var g = m.groups.filter(function (x) { return x.id === id; })[0]; if (g) { if (patch.name != null) g.name = patch.name; if (patch.targetPct != null) g.targetPct = Number(patch.targetPct); if (patch.categories != null) g.categories = patch.categories; saveBizModel(m); } }
+  function updateBizGroup(id, patch) { var m = getBizModel(); var g = m.groups.filter(function (x) { return x.id === id; })[0]; if (g) { if (patch.name != null) g.name = patch.name; if (patch.targetPct != null) g.targetPct = Number(patch.targetPct); if (patch.categories != null) { g.categories = patch.categories; m.groups.forEach(function (o) { if (o !== g && o.kind !== 'profit') o.categories = (o.categories || []).filter(function (c) { return patch.categories.indexOf(c) < 0; }); }); } saveBizModel(m); } }
   function addBizGroup(name, targetPct) { var m = getBizModel(); var idx = m.groups.length; for (var i = 0; i < m.groups.length; i++) { if (m.groups[i].kind === 'profit') { idx = i; break; } } m.groups.splice(idx, 0, { id: 'g' + uid(''), name: name || 'Nieuwe groep', kind: 'spend', targetPct: Number(targetPct) || 0, categories: [] }); saveBizModel(m); }
   function removeBizGroup(id) { var m = getBizModel(); m.groups = m.groups.filter(function (g) { return g.id !== id || g.kind === 'profit'; }); saveBizModel(m); }
   function _monthsInRange(from, to) { var out = []; if (!from || !to) return out; var y = +from.slice(0, 4), mo = +from.slice(5, 7), ey = +to.slice(0, 4), em = +to.slice(5, 7); var guard = 0; while ((y < ey || (y === ey && mo <= em)) && guard++ < 240) { out.push(y + '-' + String(mo).padStart(2, '0')); mo++; if (mo > 12) { mo = 1; y++; } } return out; }
@@ -1899,8 +2253,11 @@
     Object.keys(byItem).forEach(function (id) { var k = F.kaartByMenuItem(id); if (!k) return; var r = F.calcKaart(k); var fc = r.totalFoodcostPerPortion || r.foodcostPerPortion || 0; cost += fc * byItem[id].qty; linkedNet += byItem[id].net; });
     return { cost: round2(cost), linkedNet: round2(linkedNet) };
   }
-  function businessModelReport(from, to) {
-    var net = rangeReport(from, to).net || 0;
+  // netOverride: reken met een aangenomen netto-omzet (bv. 35.000/maand) in plaats van de echte omzet.
+  function businessModelReport(from, to, netOverride) {
+    var assumed = netOverride != null && isFinite(Number(netOverride)) && Number(netOverride) > 0;
+    var fin = financeReport(from, to);
+    var net = assumed ? Number(netOverride) : (fin.net || 0);
     var model = getBizModel();
     var months = _monthsInRange(from, to), personeel = 0;
     getPayroll().forEach(function (r) { if (r.kind === 'fee') return; if (months.indexOf(r.period) >= 0) personeel += payrollEmployerCost(r); });
@@ -1911,20 +2268,39 @@
       var actual = 0, detail = null;
       if (g.kind === 'personeel') {
         actual = personeel; detail = [];
+        if (personeel) detail.push({ cat: 'Loonkost (loonmodule)', eur: round2(personeel) });
         (g.categories || []).forEach(function (c) { used[c] = 1; var e = spend[c] || 0; if (e) { actual += e; detail.push({ cat: c, eur: e }); } });
       }
       else if (g.kind === 'fnb') {
-        // Receptgebonden foodcost + aangekochte 'voordelen van alle aard' (btw aftrekbaar, nooit in een recept verbruikt).
-        actual = fnb.cost; detail = [];
-        loadSpendCatDefs().forEach(function (c) { if (!c.benefit) return; used[c.name] = 1; var e = spend[c.name] || 0; if (e) { actual += e; detail.push({ cat: c.name, eur: e }); } });
+        detail = [];
+        if ((g.categories || []).length) {
+          // Inkoopbasis: wat er aan voeding en dranken werd aangekocht (per categorie). De recept-gebaseerde foodcost
+          // (verkoop × kaartrecept) staat ernaast als referentie. Voordelen van alle aard (btw aftrekbaar) horen er altijd bij.
+          var cats = (g.categories || []).slice();
+          loadSpendCatDefs().forEach(function (c) { if (c.benefit && cats.indexOf(c.name) < 0) cats.push(c.name); });
+          cats.forEach(function (c) { used[c] = 1; var e = spend[c] || 0; if (e) { actual += e; detail.push({ cat: c, eur: e }); } });
+        } else {
+          // Verkoop-gewogen foodcost uit recepten + aangekochte voordelen van alle aard.
+          actual = fnb.cost;
+          loadSpendCatDefs().forEach(function (c) { if (!c.benefit) return; used[c.name] = 1; var e = spend[c.name] || 0; if (e) { actual += e; detail.push({ cat: c.name, eur: e }); } });
+        }
       }
       else if (g.kind === 'spend') { detail = (g.categories || []).map(function (c) { used[c] = 1; var e = spend[c] || 0; actual += e; return { cat: c, eur: e }; }).sort(function (a, b) { return b.eur - a.eur; }); }
-      return { id: g.id, name: g.name, kind: g.kind, targetPct: Number(g.targetPct) || 0, categories: g.categories || [], actual: round2(actual), actualPct: net > 0 ? actual / net * 100 : 0, detail: detail };
+      if (detail) { detail.sort(function (a, b) { return b.eur - a.eur; }); detail.forEach(function (x) { x.pct = net > 0 ? x.eur / net * 100 : 0; }); }
+      var tgt = Number(g.targetPct) || 0;
+      var out = { id: g.id, name: g.name, kind: g.kind, targetPct: tgt, targetEur: round2(net * tgt / 100), categories: g.categories || [], actual: round2(actual), actualPct: net > 0 ? actual / net * 100 : 0, detail: detail };
+      if (g.kind === 'fnb' && (g.categories || []).length) out.reference = { label: 'Foodcost uit recepten × verkoop', eur: fnb.cost, linkedNet: fnb.linkedNet };
+      return out;
     });
-    var totalCost = groups.filter(function (g) { return g.kind !== 'profit'; }).reduce(function (s, g) { return s + g.actual; }, 0);
-    groups.forEach(function (g) { if (g.kind === 'profit') { g.actual = round2(net - totalCost); g.actualPct = net > 0 ? g.actual / net * 100 : 0; } });
     var unassigned = Object.keys(spend).filter(function (c) { return !used[c] && c !== '(geen categorie)' && !spendCatIsFnb(c); });
-    return { from: from, to: to, net: round2(net), personeel: round2(personeel), groups: groups, fnb: fnb, spend: spend, unassigned: unassigned };
+    // Uitgaven die in geen groep zitten (zonder categorie, niet toegewezen) tellen wel mee voor de winst: anders lijkt die te hoog.
+    var loose = unassigned.reduce(function (s, c) { return s + (spend[c] || 0); }, 0) + (spend['(geen categorie)'] || 0);
+    var totalCost = groups.filter(function (g) { return g.kind !== 'profit'; }).reduce(function (s, g) { return s + g.actual; }, 0) + loose;
+    groups.forEach(function (g) { if (g.kind === 'profit') { g.actual = round2(net - totalCost); g.actualPct = net > 0 ? g.actual / net * 100 : 0; } });
+    var cost = groups.filter(function (g) { return g.kind !== 'profit'; });
+    var costTotal = cost.reduce(function (s, g) { return s + g.actual; }, 0) + loose;
+    groups.forEach(function (g) { g.shareOfCost = costTotal > 0 && g.kind !== 'profit' ? g.actual / costTotal * 100 : 0; });
+    return { income: { posNet: fin.posNet, incomeNet: fin.incomeNet, days: fin.incomeDays, overlapDays: fin.overlapDays, flagged: fin.flagged, food: fin.food.net, drink: fin.drink.net, covers: fin.covers }, ledger: ledgerSummary(from, to), from: from, to: to, net: round2(net), netAssumed: assumed, personeel: round2(personeel), groups: groups, fnb: fnb, spend: spend, unassigned: unassigned, uncategorized: round2(spend['(geen categorie)'] || 0), costTotal: round2(costTotal) };
   }
 
   /* ---------- Matching: levernota ↔ factuur ---------- */
@@ -2584,7 +2960,7 @@
     getAlias, getAliasPack, setAlias, getLineCat, setLineCat, SPEND_CATS, matchDocuments,
     getSpendCats, getSpendCatDefs, spendCatDef, spendCatIsFnb, addSpendCat, updateSpendCat, removeSpendCat,
     docArticles, applyMappingsToDocs, spendByCategory,
-    getActiveDocuments, spendCoverage, assetRegister, depreciation, getDocInbox, setInboxStatus, matchSupplier, docFieldsFromExtraction, findDuplicateDoc, findDocIssues, markDuplicateDocs, getDocumentArchive,
+    getActiveDocuments, spendCoverage, assetRegister, depreciation, lastRevenueDate, monthlyRevenue, breakEven, getIncome, importIncome, incomeSummary, financeReport, ledgerVatIn, getLedger, importLedger, updateLedgerEntry, setLedgerCell, vatPaidSummary, getRepayments, addRepayPlan, updateRepayPlan, removeRepayPlan, ledgerStatus, ledgerSpend, ledgerSummary, getDocInbox, setInboxStatus, matchSupplier, docFieldsFromExtraction, findDuplicateDoc, findDocIssues, markDuplicateDocs, getDocumentArchive,
     getDocSettings, setDocSettings, retentionDate, isSummaryInvoice, suggestLevernotas, compareTotals, linkLevernotas,
     getBizModel, updateBizGroup, addBizGroup, removeBizGroup, businessModelReport, fnbSalesCost,
     purchaseVatFor, docLineVat, inputVatSummary,
