@@ -263,4 +263,5 @@ button.table-badge{ cursor:pointer; font-family:inherit; }
 .price.promo, .detail-price.promo { display: inline-flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
 .price.promo s, .detail-price.promo s { color: #9a8f80; font-weight: 400; }
 .promo-badge { background: #d64b4b; color: #fff; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 6px; letter-spacing: .02em; }
+.promo-until { color: #9a8f80; font-size: 11px; font-weight: 400; white-space: nowrap; }
 .suggs .sugg small s { color: #9a8f80; }

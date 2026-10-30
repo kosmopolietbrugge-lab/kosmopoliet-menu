@@ -21,10 +21,17 @@
   function effPrice(it) { return (D.effectivePrice ? D.effectivePrice(it) : Number(it.price || 0)); }
   function priceHtml(it, cls) {
     cls = cls || 'price';
-    var pct = Number(it.promoPct || 0);
-    if (pct > 0 && pct <= 100) return '<span class="' + cls + ' promo"><s>' + euro(it.price) + '</s> ' + euro(effPrice(it)) + ' <b class="promo-badge">-' + Math.round(pct) + '%</b></span>';
+    var pct = D.promoActivePct ? D.promoActivePct(it) : Number(it.promoPct || 0);
+    if (pct > 0 && pct <= 100) {
+      var pi = D.promoInfo ? D.promoInfo(it) : null, until = pi && pi.until ? ' <small class="promo-until">t/m ' + D.promoUntilLabel(pi.until) + '</small>' : '';
+      return '<span class="' + cls + ' promo"><s>' + euro(it.price) + '</s> ' + euro(effPrice(it)) + ' <b class="promo-badge">-' + Math.round(pct) + '%</b>' + until + '</span>';
+    }
     return '<span class="' + cls + '">' + euro(it.price) + '</span>';
   }
+  // Een promotie eindigt zonder dat de kaart ververst: elke halve minuut kijken of er iets wijzigde en dan opnieuw tekenen.
+  var _promoSig = '';
+  function promoSig() { try { return D.getItems(null, true).map(function (i) { return D.promoActivePct ? D.promoActivePct(i) : 0; }).join(','); } catch (e) { return ''; } }
+  function watchPromos(redraw) { _promoSig = promoSig(); setInterval(function () { var s = promoSig(); if (s !== _promoSig) { _promoSig = s; redraw(); } }, 30000); }
 
   var state = { activeCat: null };
 
@@ -168,7 +175,7 @@
     var gastReady = (window.KosmoGastReady && window.KosmoGastReady.catch(function () {})) || Promise.resolve();
     gastReady.then(function () {
       D.ready(function () {
-        renderMenu();
+        renderMenu(); watchPromos(renderMenu);
         D.subscribe(function (kind) { if (kind === 'data') renderMenu(); });
       });
     });

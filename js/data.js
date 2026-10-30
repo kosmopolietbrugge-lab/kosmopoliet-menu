@@ -358,10 +358,24 @@
   // Effectieve verkoopprijs incl. promotiekorting (%). round2 is hoisted.
   function effectivePrice(it) {
     if (!it) return 0;
-    var pp = Number(it.price || 0), pct = Number(it.promoPct || 0);
-    if (pct > 0 && pct <= 100) return round2(pp * (1 - pct / 100));
+    var pp = Number(it.price || 0), pct = promoActivePct(it);
+    if (pct > 0) return round2(pp * (1 - pct / 100));
     return round2(pp);
   }
+  // Promotie: percentage + einddatum (promoUntil, ISO). Zonder einddatum loopt ze door (oude gerechten); nieuwe promoties krijgen standaard 24 uur.
+  // De korting geldt enkel zolang ze actief is; daarna rekent het OS en de gastenkaart vanzelf weer met de normale prijs.
+  function promoInfo(it, now) {
+    var pct = Number(it && it.promoPct || 0); if (!(pct > 0 && pct <= 100)) return null;
+    var u = it.promoUntil ? Date.parse(it.promoUntil) : NaN, has = !isNaN(u), t = now == null ? Date.now() : now;
+    return { pct: pct, until: has ? u : null, active: !has || u > t, expired: has && u <= t };
+  }
+  function promoActivePct(it, now) { var p = promoInfo(it, now); return p && p.active ? p.pct : 0; }
+  function promoDefaultUntil(now) { return new Date((now == null ? Date.now() : now) + 24 * 3600000).toISOString(); }
+  function _p2(n) { return (n < 10 ? '0' : '') + n; }
+  // ISO <-> waarde van een datetime-local veld (lokale tijd)
+  function promoToInput(iso) { var t = iso ? new Date(iso) : null; if (!t || isNaN(t.getTime())) return ''; return t.getFullYear() + '-' + _p2(t.getMonth() + 1) + '-' + _p2(t.getDate()) + 'T' + _p2(t.getHours()) + ':' + _p2(t.getMinutes()); }
+  function promoFromInput(v) { if (!v) return ''; var t = new Date(v); return isNaN(t.getTime()) ? '' : t.toISOString(); }
+  function promoUntilLabel(ms) { var t = new Date(ms); return _p2(t.getDate()) + '/' + _p2(t.getMonth() + 1) + ' ' + _p2(t.getHours()) + ':' + _p2(t.getMinutes()); }
   // Gang van een item: eigen 'course' (>0) of anders de gang van zijn (eerste) categorie (99 = onbekend/drank).
   function itemCourse(it) {
     if (!it) return 99;
@@ -585,10 +599,10 @@
       const dest = destForItem(l.id);
       const full = Number(it.price || 0);
       const eff = isStaff ? 0 : effectivePrice(it);
-      const promoOn = (!isStaff && (Number(it.promoPct || 0) > 0) && eff < full - 0.001);
+      const promoOn = (!isStaff && promoActivePct(it) > 0 && eff < full - 0.001);
       return {
         id: uid('ol'), itemId: l.id, name: it.name || 'Onbekend',
-        dest: dest, qty: l.qty || 1, price: eff, priceOrig: promoOn ? full : null, promoPct: promoOn ? Number(it.promoPct) : 0,
+        dest: dest, qty: l.qty || 1, price: eff, priceOrig: promoOn ? full : null, promoPct: promoOn ? promoActivePct(it) : 0,
         note: (l.note || '').slice(0, NOTE_MAX),
         course: dest === 'bar' ? 1 : (Number(it.course) > 0 ? Number(it.course) : (cat && cat.course ? cat.course : 1)),
         vatCode: vatCodeFor(it), vatRate: vatRate(vatCodeFor(it)), paidQty: 0,
@@ -1109,6 +1123,20 @@
     var disc = 0, voidVal = 0, voidCount = 0;
     loadOrders().forEach(function (o) { var bd = businessDate(o.createdAt); if (bd < startStr || bd > endStr) return; o.lines.forEach(function (l) { if (l.voided) { voidVal += (l.priceOrig != null ? l.priceOrig : l.price) * l.qty; voidCount += l.qty; } else if (l.confirmed && l.priceOrig != null && l.priceOrig > l.price) { disc += (l.priceOrig - l.price) * l.qty; } }); });
     return { discount: round2(disc), voidValue: round2(voidVal), voidCount: voidCount };
+  }
+  // Wat er via promoties is weggegeven: verschil tussen volle en betaalde prijs op bevestigde, niet-geannuleerde regels. Bron: de OS-bestellingen.
+  function getPromoReport(startStr, endStr) {
+    var by = {}, total = 0, qty = 0;
+    loadOrders().forEach(function (o) {
+      var bd = businessDate(o.createdAt); if (bd < startStr || bd > endStr) return;
+      (o.lines || []).forEach(function (l) {
+        if (l.voided || !l.confirmed || l.priceOrig == null || !(l.priceOrig > l.price)) return;
+        var d = (l.priceOrig - l.price) * (l.qty || 1), k = l.itemId || l.name, b = by[k] = by[k] || { itemId: l.itemId, name: l.name, qty: 0, discount: 0 };
+        b.qty += l.qty || 1; b.discount += d; total += d; qty += l.qty || 1;
+      });
+    });
+    var items = Object.keys(by).map(function (k) { by[k].discount = round2(by[k].discount); return by[k]; }).sort(function (a, b) { return b.discount - a.discount; });
+    return { discount: round2(total), qty: qty, items: items };
   }
   function getDrinkAttach(startStr, endStr) {
     var sess = {}; paymentsInRange(startStr, endStr, true).forEach(function (p) { if (!p.sessionId) return; if (!sess[p.sessionId]) sess[p.sessionId] = false; p.lines.forEach(function (l) { if (l.dest === 'bar') sess[p.sessionId] = true; }); });
@@ -2968,6 +2996,7 @@
     getCategories, addCategory, updateCategory, removeCategory, moveCategory,
     vatCodeFor, vatRate, defaultVatForSource, VAT_RATES,
     getItems, getItem, addItem, updateItem, removeItem, setAvailable, setArchived, getDrinkItems, effectivePrice, itemCourse,
+    promoInfo, promoActivePct, promoDefaultUntil, promoToInput, promoFromInput, promoUntilLabel, getPromoReport,
     addItemCategory, removeItemCategory, moveItem,
     placeholder, imgFor, tintFor, resolveImg, putImage, delImage, ready, loadImages,
     setMediaMode, onImage, getImageDataURL, putImageAt,
