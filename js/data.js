@@ -38,7 +38,7 @@
     // Bar/zaal
     'barzaal::Items en categorieen bar': 'staff', 'barzaal::Bestellingen en voorraad bar': 'staff', 'barzaal::Dagafsluiting': 'staff', 'barzaal::Reserveringen': 'staff',
     // F&B (alles staff)
-    'menu::Menukaart (alle categorieen)': 'staff', 'menu::F&B rekenmodule': 'staff', 'menu::Foodcost': 'staff', 'menu::Menu-analyse': 'staff', 'menu::Klantmenu (QR)': 'staff', 'menu::Seizoen & specials': 'staff',
+    'menu::Menukaart (alle categorieen)': 'staff', 'menu::Recepten': 'staff', 'menu::F&B cost analyse': 'staff', 'menu::F&B rekenmodule': 'staff', 'menu::Foodcost': 'staff', 'menu::Menu-analyse': 'staff', 'menu::Klantmenu (QR)': 'staff', 'menu::Seizoen & specials': 'staff',
     // Business
     'business::Dashboard & KPI': 'management', 'business::Omzet & rapporten': 'staff', 'business::Boekhouding': 'management', 'business::Cashflow': 'management', 'business::Doelen': 'management', 'business::Rentabiliteit': 'management',
     // Marketing (alles staff)
@@ -1235,7 +1235,9 @@
   /* ---------- Gebruikers, rollen & sessie (KosmoKrew) ---------- */
   const ROLE_RANK = { help: 1, staff: 2, management: 3 };
   function roleRank(r) { return ROLE_RANK[r] || 1; }
-  function getClearance(key) { var d = load(); if (d.clearance && d.clearance[key]) return d.clearance[key]; return DEFAULT_CLEARANCE[key] || 'help'; }
+  // Hernoemde tegels behouden hun eerder ingestelde toegangsniveau (sleutel = module::tegelnaam).
+  const LEGACY_TILE_KEYS = { 'menu::Recepten': 'menu::F&B rekenmodule', 'menu::F&B cost analyse': 'menu::Foodcost' };
+  function getClearance(key) { var d = load(); if (d.clearance && d.clearance[key]) return d.clearance[key]; var old = LEGACY_TILE_KEYS[key]; if (old && d.clearance && d.clearance[old]) return d.clearance[old]; return DEFAULT_CLEARANCE[key] || 'help'; }
   function setClearance(key, level) { const d = load(); d.clearance = d.clearance || {}; d.clearance[key] = level; save(d); return level; }
   /* ---------- Praten met de centrale pc ----------
      Eén plek waar alle /auth/- en /crew/-aanvragen langsgaan, zodat de
