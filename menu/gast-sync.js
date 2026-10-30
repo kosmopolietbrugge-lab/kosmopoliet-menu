@@ -26,6 +26,6 @@
 
   try { D.setMediaMode('media/'); } catch (e) {}
   window.KosmoGastReady = pull();
-  setInterval(pull, 180000);
+  setInterval(pull, 60000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) pull(); });
 })();
