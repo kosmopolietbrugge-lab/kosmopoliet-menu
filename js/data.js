@@ -308,13 +308,18 @@
   /* ---------- Items ---------- */
   // Een gerecht kan bij meerdere categorieën staan (cats) — getItems(catId)
   // geeft dus elk gerecht terug dat catId er één van heeft.
-  function getItems(catId, onlyAvailable) {
+  // Gearchiveerde gerechten (archived) zijn van de standaardkaart af: ze verdwijnen uit klantmenu, bediening en analyses,
+  // maar blijven bewaard (historiek, terugzetten). Enkel met opts.includeArchived komen ze mee.
+  // available:false = tijdelijk niet voorradig (blijft op de standaardkaart, verborgen voor gasten).
+  function getItems(catId, onlyAvailable, opts) {
     let items = load().items;
+    if (!(opts && opts.includeArchived)) items = items.filter(i => !i.archived);
     if (catId) items = items.filter(i => Array.isArray(i.cats) && i.cats.indexOf(catId) >= 0);
     if (onlyAvailable) items = items.filter(i => i.available !== false);
     return items;
   }
   function setAvailable(id, val) { return updateItem(id, { available: !!val }); }
+  function setArchived(id, on) { return updateItem(id, { archived: !!on, archivedAt: on ? businessDate(Date.now()) : '' }); }
   function getItem(id) { return load().items.find(i => i.id === id); }
   // Verplaatst een gerecht één plek op/neer BINNEN catId (dir -1/+1) — de
   // volgorde in de klantkaart en in Menukaart-beheer. Belangrijk voor
@@ -367,7 +372,7 @@
   // Alle drankjes: dit is nu een eigenschap van het gerecht zelf (station),
   // niet van de categorie waarin het toevallig staat.
   function getDrinkItems() {
-    return load().items.filter(function (i) { return i.station === 'barzaal'; });
+    return load().items.filter(function (i) { return i.station === 'barzaal' && !i.archived; });
   }
   function addItem(catId, patch) {
     const d = load();
@@ -2962,7 +2967,7 @@
     getSession, setSession, clearSession,
     getCategories, addCategory, updateCategory, removeCategory, moveCategory,
     vatCodeFor, vatRate, defaultVatForSource, VAT_RATES,
-    getItems, getItem, addItem, updateItem, removeItem, setAvailable, getDrinkItems, effectivePrice, itemCourse,
+    getItems, getItem, addItem, updateItem, removeItem, setAvailable, setArchived, getDrinkItems, effectivePrice, itemCourse,
     addItemCategory, removeItemCategory, moveItem,
     placeholder, imgFor, tintFor, resolveImg, putImage, delImage, ready, loadImages,
     setMediaMode, onImage, getImageDataURL, putImageAt,
