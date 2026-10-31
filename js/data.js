@@ -244,7 +244,7 @@
      een belofte (Promise) terug; de aanroeper wacht het antwoord af. */
   function checkStaffPin(pin) {
     return api('POST', '/auth/pin', { pin: String(pin == null ? '' : pin).trim() })
-      .then(function (r) { return !!(r && r.ok); })
+      .then(function (r) { if (r && r.ok && r.token) { try { sessionStorage.setItem('kosmo-stafftoken', r.token); } catch (e) {} } return !!(r && r.ok); })
       .catch(function () { return false; });   // pc onbereikbaar = niet binnen
   }
   function setStaffPin(pin) {
