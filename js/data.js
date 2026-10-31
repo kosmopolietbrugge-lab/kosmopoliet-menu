@@ -40,7 +40,7 @@
     // F&B (alles staff)
     'menu::Menukaart (alle categorieen)': 'staff', 'menu::Recepten': 'staff', 'menu::F&B cost analyse': 'staff', 'menu::F&B rekenmodule': 'staff', 'menu::Foodcost': 'staff', 'menu::Menu-analyse': 'staff', 'menu::Margecontributie / Mix-marge': 'staff', 'menu::Klantmenu (QR)': 'staff', 'menu::Seizoen & specials': 'staff',
     // Business
-    'business::Dashboard & KPI': 'management', 'business::Omzet & rapporten': 'staff', 'business::Boekhouding': 'management', 'business::Balans': 'management', 'business::BTW': 'staff', 'business::Lonen & afbetalingen': 'management', 'business::Documentenarchief': 'staff', 'business::Bedrijfsmodel': 'staff', 'business::Cashflow': 'management', 'business::Doelen': 'management', 'business::Rentabiliteit': 'management',
+    'business::Dashboard & KPI': 'management', 'business::Omzet & rapporten': 'staff', 'business::Boekhouding': 'management', 'business::Balans': 'management', 'business::BTW': 'staff', 'business::Lonen & afbetalingen': 'management', 'business::Kostengroepen': 'management', 'business::Documentenarchief': 'staff', 'business::Bedrijfsmodel': 'staff', 'business::Cashflow': 'management', 'business::Doelen': 'management', 'business::Rentabiliteit': 'management',
     // Marketing (alles staff)
     'marketing::Campagnes': 'staff', 'marketing::Social media': 'staff', 'marketing::Reviews': 'staff', 'marketing::Nieuwsbrief': 'staff', 'marketing::Loyaliteit': 'staff', 'marketing::Gastenbestand': 'staff',
     // Housekeeping (alles staff)
@@ -2311,6 +2311,94 @@
   function updateBizGroup(id, patch) { var m = getBizModel(); var g = m.groups.filter(function (x) { return x.id === id; })[0]; if (g) { if (patch.name != null) g.name = patch.name; if (patch.targetPct != null) g.targetPct = Number(patch.targetPct); if (patch.categories != null) { g.categories = patch.categories; m.groups.forEach(function (o) { if (o !== g && o.kind !== 'profit') o.categories = (o.categories || []).filter(function (c) { return patch.categories.indexOf(c) < 0; }); }); } saveBizModel(m); } }
   function addBizGroup(name, targetPct) { var m = getBizModel(); var idx = m.groups.length; for (var i = 0; i < m.groups.length; i++) { if (m.groups[i].kind === 'profit') { idx = i; break; } } m.groups.splice(idx, 0, { id: 'g' + uid(''), name: name || 'Nieuwe groep', kind: 'spend', targetPct: Number(targetPct) || 0, categories: [] }); saveBizModel(m); }
   function removeBizGroup(id) { var m = getBizModel(); m.groups = m.groups.filter(function (g) { return g.id !== id || g.kind === 'profit'; }); saveBizModel(m); }
+  /* ---------- Kostengroepen: het spreadsheet-overzicht (groep → categorie → post × 12 maanden) ----------
+     Zelfde gegevens als Boekhouding en Bedrijfsmodel: de posten zijn de kasboekregels (label + categorie), de groepen zijn de
+     groepen van het bedrijfsmodel, en facturen die in het OS staan komen per categorie als aparte regel bij. Een post "verplaatsen"
+     = zijn categorie veranderen; een categorie verplaatsen = ze in een andere groep zetten. Niets hiervan wijzigt een factuur. */
+  function moveBizCategory(cat, groupId) {
+    var m = getBizModel(), g = m.groups.filter(function (x) { return x.id === groupId && x.kind !== 'profit'; })[0];
+    if (!g || !cat) return false;
+    updateBizGroup(groupId, { categories: (g.categories || []).filter(function (c) { return c !== cat; }).concat([cat]) }); return true;
+  }
+  // Groep één plek omhoog (dir -1) of omlaag (+1); de winstgroep blijft onderaan.
+  function moveBizGroup(id, dir) {
+    var m = getBizModel(), cost = m.groups.filter(function (g) { return g.kind !== 'profit'; }), i = cost.map(function (g) { return g.id; }).indexOf(id), j = i + (dir < 0 ? -1 : 1);
+    if (i < 0 || j < 0 || j >= cost.length) return false;
+    var tmp = cost[i]; cost[i] = cost[j]; cost[j] = tmp;
+    m.groups = cost.concat(m.groups.filter(function (g) { return g.kind === 'profit'; })); saveBizModel(m); return true;
+  }
+  // Groep schrappen: haar categorieën verhuizen eerst naar een andere groep (anders vallen ze buiten het model). Winst- en kerngroepen blijven.
+  function removeBizGroupInto(id, intoId) {
+    var m = getBizModel(), g = m.groups.filter(function (x) { return x.id === id; })[0], to = m.groups.filter(function (x) { return x.id === intoId && x.kind !== 'profit'; })[0];
+    if (!g || g.kind === 'profit' || !to || to === g) return false;
+    (g.categories || []).forEach(function (c) { moveBizCategory(c, intoId); }); removeBizGroup(id); return true;
+  }
+  function renameLedgerPost(category, label, newLabel) {
+    newLabel = String(newLabel || '').trim(); if (!newLabel) return 0;
+    var l = loadLedger(), k = _lnorm(label), n = 0;
+    l.forEach(function (e) { if (e.category === category && _lnorm(e.label) === k) { e.label = newLabel; n++; } });
+    if (n) saveLedger(l); return n;
+  }
+  function moveLedgerPost(category, label, toCategory) {
+    if (!toCategory || toCategory === category) return 0;
+    var l = loadLedger(), k = _lnorm(label), n = 0;
+    l.forEach(function (e) { if (e.category === category && _lnorm(e.label) === k) { e.category = toCategory; n++; } });
+    if (n) saveLedger(l); return n;
+  }
+  function costGroupsReport(year) {
+    year = +year || +todayStr().slice(0, 4);
+    var months = []; for (var i = 1; i <= 12; i++) months.push(year + '-' + String(i).padStart(2, '0'));
+    var zero = function () { var a = []; for (var q = 0; q < 12; q++) a.push(0); return a; };
+    var model = getBizModel(), catGroup = {};
+    model.groups.forEach(function (g) { if (g.kind !== 'profit') (g.categories || []).forEach(function (c) { catGroup[c] = g.id; }); });
+    // posten uit het kasboek: categorie → post → 12 cellen
+    var byCat = {};
+    ledgerStatus().forEach(function (s) {
+      var e = s.entry; if (e.superseded || String(e.month).slice(0, 4) !== String(year)) return;
+      var idx = +String(e.month).slice(5, 7) - 1; if (idx < 0 || idx > 11) return;
+      var cat = byCat[e.category] || (byCat[e.category] = {}), k = _lnorm(e.label), p = cat[k] || (cat[k] = { key: k, label: e.label, cells: [], total: 0 });
+      var c = p.cells[idx] || (p.cells[idx] = { amount: 0, counted: 0, kind: e.kind, factor: 1, status: s.status, reason: '' });
+      c.amount = round2(c.amount + (Number(e.amount) || 0)); c.counted = round2(c.counted + (e.excluded ? 0 : (Number(e.amount) || 0) * s.factor));
+      if (e.kind === 'kost') c.kind = 'kost'; if (s.factor < 1) { c.factor = Math.min(c.factor, s.factor); c.status = s.status; c.reason = s.reason || ''; }
+    });
+    // facturen van het OS per categorie en maand (zonder het kasboek, dat staat hierboven)
+    var inv = {};
+    months.forEach(function (mm, i) {
+      var from = mm + '-01', to = _lastDay(mm), a = spendByCategory(from, to), l = ledgerSpend(from, to);
+      Object.keys(a).forEach(function (c) { var v = round2(a[c] - (l[c] || 0)); if (v > 0.004) (inv[c] = inv[c] || zero())[i] = v; });
+    });
+    function catObj(name) {
+      var posts = Object.keys(byCat[name] || {}).map(function (k) { var p = byCat[name][k]; p.total = round2(p.cells.reduce(function (s, c) { return s + (c ? c.counted : 0); }, 0)); return p; })
+        .sort(function (a, b) { return b.total - a.total || a.label.localeCompare(b.label); });
+      var mt = zero(); posts.forEach(function (p) { p.cells.forEach(function (c, i) { if (c) mt[i] += c.counted; }); });
+      var iv = inv[name] || null; if (iv) iv.forEach(function (v, i) { mt[i] += v; });
+      mt = mt.map(round2);
+      return { name: name, posts: posts, invoices: iv, invoiceTotal: iv ? round2(iv.reduce(function (s, v) { return s + v; }, 0)) : 0, monthTotals: mt, total: round2(mt.reduce(function (s, v) { return s + v; }, 0)) };
+    }
+    var groups = model.groups.filter(function (g) { return g.kind !== 'profit'; }).map(function (g) {
+      var names = (g.categories || []).slice(); Object.keys(byCat).concat(Object.keys(inv)).forEach(function (c) { if (catGroup[c] === g.id && names.indexOf(c) < 0) names.push(c); });
+      return { id: g.id, name: g.name, kind: g.kind, targetPct: Number(g.targetPct) || 0, core: ['personeel', 'fnb', 'vast', 'variabel'].indexOf(g.id) >= 0, cats: names.map(catObj) };
+    });
+    // categorieën met uitgaven maar zonder groep
+    var loose = []; Object.keys(byCat).concat(Object.keys(inv)).forEach(function (c) { if (!catGroup[c] && loose.indexOf(c) < 0) loose.push(c); });
+    if (loose.length) groups.push({ id: '', name: 'Niet ingedeeld', kind: 'spend', targetPct: 0, core: true, loose: true, cats: loose.map(catObj) });
+    // loonkost uit de loonmodule telt bij Personeel (zoals in het bedrijfsmodel)
+    var pers = groups.filter(function (g) { return g.kind === 'personeel'; })[0];
+    if (pers) {
+      var pm = zero(); months.forEach(function (mm, i) { var s = payrollSummary(mm); pm[i] = round2(s && s.personeelskost || 0); });
+      var pt = round2(pm.reduce(function (s, v) { return s + v; }, 0));
+      if (pt > 0) pers.cats.push({ name: 'Loonkost (loonmodule)', virtual: true, posts: [{ key: 'loonmodule', label: 'Werkgeverskost uit de loonmodule', readonly: true, cells: pm.map(function (v) { return v ? { amount: v, counted: v, kind: 'kost', factor: 1 } : null; }), total: pt }], invoices: null, invoiceTotal: 0, monthTotals: pm, total: pt });
+    }
+    var net = safe0(function () { return financeReport(year + '-01-01', year + '-12-31').net; }, 0), grand = zero();
+    groups.forEach(function (g) {
+      g.monthTotals = zero(); g.cats.forEach(function (c) { c.monthTotals.forEach(function (v, i) { g.monthTotals[i] += v; }); });
+      g.monthTotals = g.monthTotals.map(round2); g.total = round2(g.monthTotals.reduce(function (s, v) { return s + v; }, 0)); g.pctOfNet = net > 0 ? round2(g.total / net * 100) : null;
+      g.monthTotals.forEach(function (v, i) { grand[i] += v; });
+    });
+    grand = grand.map(round2);
+    return { year: year, months: months, groups: groups, net: round2(net), monthTotals: grand, total: round2(grand.reduce(function (s, v) { return s + v; }, 0)) };
+  }
+  function safe0(fn, d) { try { return fn(); } catch (e) { return d; } }
   function _monthsInRange(from, to) { var out = []; if (!from || !to) return out; var y = +from.slice(0, 4), mo = +from.slice(5, 7), ey = +to.slice(0, 4), em = +to.slice(5, 7); var guard = 0; while ((y < ey || (y === ey && mo <= em)) && guard++ < 240) { out.push(y + '-' + String(mo).padStart(2, '0')); mo++; if (mo > 12) { mo = 1; y++; } } return out; }
   // VERKOOP-GEWOGEN F&B-kost uit de betalingen × recept-foodcost.
   function fnbSalesCost(from, to) {
@@ -3031,7 +3119,7 @@
     docArticles, applyMappingsToDocs, spendByCategory,
     getActiveDocuments, spendCoverage, assetRegister, depreciation, lastRevenueDate, monthlyRevenue, breakEven, getIncome, importIncome, incomeSummary, financeReport, ledgerVatIn, vatReturn, getLedger, importLedger, updateLedgerEntry, setLedgerCell, vatPaidSummary, getRepayments, addRepayPlan, updateRepayPlan, removeRepayPlan, ledgerStatus, ledgerSpend, ledgerSummary, getDocInbox, setInboxStatus, matchSupplier, docFieldsFromExtraction, findDuplicateDoc, findDocIssues, markDuplicateDocs, getDocumentArchive,
     getDocSettings, setDocSettings, retentionDate, isSummaryInvoice, suggestLevernotas, compareTotals, linkLevernotas,
-    getBizModel, updateBizGroup, addBizGroup, removeBizGroup, businessModelReport, fnbSalesCost,
+    getBizModel, updateBizGroup, addBizGroup, removeBizGroup, costGroupsReport, moveBizCategory, moveBizGroup, removeBizGroupInto, renameLedgerPost, moveLedgerPost, businessModelReport, fnbSalesCost,
     purchaseVatFor, docLineVat, inputVatSummary,
     hrProviders, getHrProvider, getHrProviderInfo, setHrProvider,
     getPayroll, payrollPeriods, addPayrollEntry, updatePayrollEntry, removePayrollEntry,
