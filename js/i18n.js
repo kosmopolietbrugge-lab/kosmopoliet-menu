@@ -4,7 +4,8 @@
    bestaande code: het bewaart de originele NL-tekst per DOM-node en
    vervangt die door de vertaling uit het woordenboek. Onvertaalde
    zinnen blijven gewoon Nederlands (geen breuk). Het servicesysteem
-   (#svc-root) heeft zijn eigen vertaling en wordt hier overgeslagen.
+   (#svc-root) heeft zijn eigen vertaling en wordt hier overgeslagen;
+   de tabbladen van Recepten (#fnb-tabs) blijven altijd Nederlands.
    ============================================================ */
 (function () {
   'use strict';
@@ -529,7 +530,7 @@
   var orig = (typeof WeakMap !== 'undefined') ? new WeakMap() : null;
   var mo = null, pending = false;
 
-  function inSvc(node) { var e = node && node.nodeType === 3 ? node.parentNode : node; while (e) { if (e.id === 'svc-root') return true; e = e.parentNode; } return false; }
+  function inSvc(node) { var e = node && node.nodeType === 3 ? node.parentNode : node; while (e) { if (e.id === 'svc-root' || e.id === 'fnb-tabs') return true; e = e.parentNode; } return false; }
 
   function translateText(root) {
     var m = DICT[lang];
