@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Kosmopoliet — Etalagekaart</title>
+  <meta name="theme-color" content="#141213">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="icon" type="image/png" href="icons/favicon-64.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="menu/raam-menu.css">
+</head>
+<body>
+  <!-- Etalagekaart: de hele kaart op één pagina, gemaakt om op een scherm achter het raam te staan (of uit te printen).
+       Zelfde gegevens, volgorde en kleuren als de klantkaart; past zichzelf aan het scherm aan. Dubbelklik = volledig scherm. -->
+  <main id="raam">
+    <div id="sheet" class="sheet">
+      <header class="r-head">
+        <img id="r-logo" class="r-logo" src="assets/img/mark-gold.png" alt="">
+        <div class="r-title">
+          <h1 id="r-name">Kosmopoliet</h1>
+          <p id="r-baseline" class="r-baseline">plant based eetcafé - Brugge</p>
+        </div>
+      </header>
+      <section id="r-specials" class="r-specials" hidden></section>
+      <div id="r-cols" class="r-cols"></div>
+      <footer class="r-foot">Prijzen in euro, inclusief btw · Allergenen? Vraag het aan de bediening.</footer>
+    </div>
+  </main>
+
+  <script src="js/data.js"></script>
+  <script src="menu/gast-sync.js"></script>
+  <script src="menu/menu-ui.js"></script>
+  <script src="menu/raam-menu.js"></script>
+</body>
+</html>

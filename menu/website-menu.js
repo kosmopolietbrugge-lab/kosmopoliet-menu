@@ -19,15 +19,7 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
   function euro(n) { return '€ ' + Number(n || 0).toFixed(2).replace('.', ','); }
   function effPrice(it) { return (D.effectivePrice ? D.effectivePrice(it) : Number(it.price || 0)); }
-  function priceHtml(it, cls) {
-    cls = cls || 'price';
-    var pct = D.promoActivePct ? D.promoActivePct(it) : Number(it.promoPct || 0);
-    if (pct > 0 && pct <= 100) {
-      var pi = D.promoInfo ? D.promoInfo(it) : null, until = pi && pi.until ? ' <small class="promo-until">t/m ' + D.promoUntilLabel(pi.until) + '</small>' : '';
-      return '<span class="' + cls + ' promo"><s>' + euro(it.price) + '</s> ' + euro(effPrice(it)) + ' <b class="promo-badge">-' + Math.round(pct) + '%</b>' + until + '</span>';
-    }
-    return '<span class="' + cls + '">' + euro(it.price) + '</span>';
-  }
+  function priceHtml(it, cls) { return KosmoMenuUI.price(D, it, cls); }
   // Een promotie eindigt zonder dat de kaart ververst: elke halve minuut kijken of er iets wijzigde en dan opnieuw tekenen.
   var _promoSig = '';
   function promoSig() { try { return D.getItems(null, true).map(function (i) { return D.promoActivePct ? D.promoActivePct(i) : 0; }).join(','); } catch (e) { return ''; } }
@@ -66,12 +58,7 @@
     if (!cat) { wrap.appendChild(el('p', 'basket-empty', 'Nog geen categorieën.')); return; }
     var kind = KosmoMenuUI.kind(cat);
     wrap.appendChild(el('h2', 'cat-title k-' + kind, esc(cat.name)));
-    var items = D.getItems(cat.id, true);
-    if (kind === 'special' && cat.id !== 'specials' && D.itemCourse) {   // Specials houdt de volgorde van de kaart (zelf te schuiven in Menukaart-beheer)
-      items = items.map(function (it, i) { return { it: it, i: i, c: D.itemCourse(it) }; })
-        .sort(function (a, b) { return a.c - b.c || a.i - b.i; })
-        .map(function (o) { return o.it; });
-    }
+    var items = KosmoMenuUI.items(D, cat);
     if (!items.length) { wrap.appendChild(el('p', 'basket-empty', 'Nog geen gerechten in deze categorie.')); return; }
     items.forEach(function (it) { wrap.appendChild(itemCard(it)); });
   }

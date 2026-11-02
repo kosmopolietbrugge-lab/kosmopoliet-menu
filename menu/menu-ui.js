@@ -53,6 +53,31 @@
     }
   }
 
+  // De gerechten van een categorie, in de volgorde van de kaart. Specials houdt de volgorde van de kaart (zelf te schuiven in
+  // Menukaart-beheer); Suggesties/Promoties staan op gang (voor → hoofd → dessert → drank).
+  function items(D, cat) {
+    var list = D.getItems(cat.id, true);
+    if (kind(cat) === 'special' && cat.id !== 'specials' && D.itemCourse) {
+      list = list.map(function (it, i) { return { it: it, i: i, c: D.itemCourse(it) }; })
+        .sort(function (a, b) { return a.c - b.c || a.i - b.i; })
+        .map(function (o) { return o.it; });
+    }
+    return list;
+  }
+  // De prijs van een gerecht, met promotie (doorgestreepte prijs, percentage, einddatum) als die loopt.
+  // opts.plain = zonder €-teken en zonder ,00 (voor de etalagekaart).
+  function euro(n, plain) { n = Number(n || 0); return plain ? (n % 1 === 0 ? String(n) : n.toFixed(2).replace('.', ',')) : '€ ' + n.toFixed(2).replace('.', ','); }
+  function price(D, it, cls, plain) {
+    cls = cls || 'price';
+    var eff = D.effectivePrice ? D.effectivePrice(it) : Number(it.price || 0);
+    var pct = D.promoActivePct ? D.promoActivePct(it) : Number(it.promoPct || 0);
+    if (pct > 0 && pct <= 100) {
+      var pi = D.promoInfo ? D.promoInfo(it) : null, until = pi && pi.until ? ' <small class="promo-until">t/m ' + D.promoUntilLabel(pi.until) + '</small>' : '';
+      return '<span class="' + cls + ' promo"><s>' + euro(it.price, plain) + '</s> ' + euro(eff, plain) + ' <b class="promo-badge">-' + Math.round(pct) + '%</b>' + until + '</span>';
+    }
+    return '<span class="' + cls + '">' + euro(it.price, plain) + '</span>';
+  }
+
   /* ---------- onderste schermen ---------- */
   var pushed = false, closer = null;
   // Telefoonknop "terug" sluit het open scherm in plaats van de kaart te verlaten.
@@ -118,5 +143,5 @@
     document.querySelectorAll('.sheet').forEach(function (s) { drag(s, closeAll); });
   }
 
-  window.KosmoMenuUI = { kind: kind, cats: cats, chips: chips, init: init, opened: opened, closed: closed };
+  window.KosmoMenuUI = { kind: kind, cats: cats, items: items, price: price, euro: euro, chips: chips, init: init, opened: opened, closed: closed };
 })();
