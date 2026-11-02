@@ -14,6 +14,7 @@
   --radius:18px; --ease:cubic-bezier(.2,.7,.2,1);
   --fd:"Archane",Georgia,serif; --fb:"Corbel","Segoe UI",system-ui,sans-serif;
   --maxw:680px;
+  --c-special:#E4B569; --c-food:#7CC28B; --c-drink:#7DB6E6;   /* soort categorie: special = goud, eten = groen, drank = blauw */
 }
 *{box-sizing:border-box;}
 html,body{margin:0;height:100%;}
@@ -109,12 +110,25 @@ body{top:0 !important;}
 .cat-bar::-webkit-scrollbar{ display:none; }
 .cat-chip{ white-space:nowrap; padding:9px 16px; border-radius:999px; border:1px solid var(--border);
   background:var(--surface); color:var(--dim); font-size:14px; font-weight:700; transition:.15s var(--ease); }
-.cat-chip.active{ background:var(--gold); color:var(--char); border-color:var(--gold); }
+.cat-chip.grp-start{ margin-left:14px; }
+/* kleur per soort: knop met tintje in rust, gevuld als gekozen */
+.cat-chip.k-special{ --k:var(--c-special); }
+.cat-chip.k-food{ --k:var(--c-food); }
+.cat-chip.k-drink{ --k:var(--c-drink); }
+.cat-chip.k-special, .cat-chip.k-food, .cat-chip.k-drink{ color:var(--k); border-color:color-mix(in srgb, var(--k) 45%, var(--border));
+  background:color-mix(in srgb, var(--k) 11%, var(--surface)); }
+.cat-chip.k-special::before{ content:"\2726\00a0"; }
+.cat-chip.k-special.active{ box-shadow:0 0 0 3px color-mix(in srgb, var(--c-special) 28%, transparent); }
+.cat-chip.active{ background:var(--k, var(--gold)); color:var(--char); border-color:var(--k, var(--gold)); }
 
 /* items */
 .items{ max-width:var(--maxw); width:100%; margin:0 auto; padding:16px 16px 120px; }
 .cat-title{ font-family:var(--fd); font-size:22px; margin:18px 4px 12px; color:var(--gold); letter-spacing:.02em; }
 .cat-title:first-child{ margin-top:6px; }
+.cat-title.k-special{ color:var(--c-special); }
+.cat-title.k-food{ color:var(--c-food); }
+.cat-title.k-drink{ color:var(--c-drink); }
+.cat-title.k-special::before{ content:"\2726\00a0"; }
 .item{ display:flex; gap:14px; padding:12px; border-radius:var(--radius); background:var(--surface);
   border:1px solid var(--border); margin-bottom:12px; transition:.15s var(--ease); }
 .item:active{ transform:scale(.995); }
@@ -146,12 +160,17 @@ body{top:0 !important;}
 .sheet-backdrop{ position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.55);
   opacity:0; pointer-events:none; transition:.25s var(--ease); }
 .sheet-backdrop.show{ opacity:1; pointer-events:auto; }
-.sheet{ position:fixed; left:0; right:0; bottom:0; z-index:61; max-height:92dvh; overflow-y:auto;
+.sheet{ position:fixed; left:0; right:0; bottom:0; z-index:61; max-height:92dvh; display:flex; flex-direction:column; overflow:hidden;
   background:var(--bg); border-top-left-radius:22px; border-top-right-radius:22px; border-top:1px solid var(--border);
   transform:translateY(100%); transition:.3s var(--ease); }
 .sheet.show{ transform:translateY(0); }
-.sheet .grip{ width:44px; height:5px; border-radius:5px; background:var(--border); margin:10px auto 4px; }
-.sheet-inner{ max-width:var(--maxw); margin:0 auto; padding:8px 18px 28px; }
+/* streepje bovenaan = ruime sleepzone (blijft staan); de inhoud scrolt eronder */
+.sheet .grip{ flex:0 0 auto; height:34px; display:flex; align-items:center; justify-content:center; cursor:grab; touch-action:none; }
+.sheet .grip::before{ content:""; width:52px; height:5px; border-radius:5px; background:color-mix(in srgb, var(--text) 38%, transparent); }
+.sheet-inner{ flex:1 1 auto; min-height:0; width:100%; max-width:var(--maxw); margin:0 auto; padding:4px 18px 28px; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+.sheet-x{ position:absolute; top:8px; right:12px; z-index:3; width:40px; height:40px; border-radius:50%; display:grid; place-items:center;
+  border:1px solid rgba(255,255,255,.22); background:rgba(0,0,0,.55); color:var(--text); font-size:16px; line-height:1; backdrop-filter:blur(6px); }
+.sheet-x:hover{ border-color:var(--gold); color:var(--gold); }
 
 /* item detail */
 .detail-img{ width:100%; height:auto; aspect-ratio:16/10; object-fit:cover; border-radius:16px; background:var(--surface-2); }

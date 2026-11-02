@@ -45,27 +45,7 @@
 
   function renderMenu() {
     renderHead();
-    function specialRank(s) { return (s.indexOf('suggest') >= 0 || s.indexOf('aanrad') >= 0) ? 0 : ((s.indexOf('promo') >= 0 || s.indexOf('acti') >= 0) ? 1 : -1); }
-    function isSpecialName(s) { return specialRank(s) >= 0; }
-    var cats = D.getCategories().filter(function (c) {
-      var s = ((c.id || '') + ' ' + (c.name || '')).toLowerCase();
-      if (isSpecialName(s)) return true;
-      return D.getItems(c.id, true).length > 0;
-    });
-    function catRank(c) {
-      var s = ((c.id || '') + ' ' + (c.name || '')).toLowerCase();
-      var sp = specialRank(s);
-      if (sp >= 0) return sp;
-      if (c.source === 'barzaal') return 2;
-      return 3;
-    }
-    cats = cats.map(function (c, i) { return { c: c, i: i, r: catRank(c), course: (c.course || 99) }; })
-      .sort(function (a, b) {
-        if (a.r !== b.r) return a.r - b.r;
-        if (a.r === 3 && a.course !== b.course) return a.course - b.course;
-        return a.i - b.i;
-      })
-      .map(function (o) { return o.c; });
+    var cats = KosmoMenuUI.cats(D);
     if (!state.activeCat || !cats.some(function (c) { return c.id === state.activeCat; })) {
       state.activeCat = cats.length ? cats[0].id : null;
     }
@@ -74,14 +54,9 @@
   }
 
   function renderCats(cats) {
-    var bar = $('#cat-bar'); bar.innerHTML = '';
-    cats.forEach(function (c) {
-      var b = el('button', 'cat-chip' + (c.id === state.activeCat ? ' active' : ''), esc(c.name));
-      b.addEventListener('click', function () {
-        state.activeCat = c.id; renderCats(cats); renderItems();
-        document.querySelector('.items').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-      bar.appendChild(b);
+    KosmoMenuUI.chips($('#cat-bar'), cats, state.activeCat, function (c) {
+      state.activeCat = c.id; renderCats(cats); renderItems();
+      document.querySelector('.items').scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }
 
@@ -89,11 +64,10 @@
     var wrap = $('#items'); wrap.innerHTML = '';
     var cat = D.getCategories().find(function (c) { return c.id === state.activeCat; });
     if (!cat) { wrap.appendChild(el('p', 'basket-empty', 'Nog geen categorieën.')); return; }
-    wrap.appendChild(el('h2', 'cat-title', esc(cat.name)));
+    var kind = KosmoMenuUI.kind(cat);
+    wrap.appendChild(el('h2', 'cat-title k-' + kind, esc(cat.name)));
     var items = D.getItems(cat.id, true);
-    var catName = ((cat.id || '') + ' ' + (cat.name || '')).toLowerCase();
-    var special = (catName.indexOf('suggest') >= 0 || catName.indexOf('aanrad') >= 0 || catName.indexOf('promo') >= 0 || catName.indexOf('acti') >= 0);
-    if (special && D.itemCourse) {
+    if (kind === 'special' && D.itemCourse) {
       items = items.map(function (it, i) { return { it: it, i: i, c: D.itemCourse(it) }; })
         .sort(function (a, b) { return a.c - b.c || a.i - b.i; })
         .map(function (o) { return o.it; });
@@ -131,6 +105,7 @@
   }
 
   function openSheet(name) {
+    KosmoMenuUI.opened($('#' + name + '-sheet'));
     $('#' + name + '-sheet').classList.add('show');
     $('#backdrop').classList.add('show');
     document.body.style.overflow = 'hidden';
@@ -139,6 +114,7 @@
     document.querySelectorAll('.sheet').forEach(function (s) { s.classList.remove('show'); });
     $('#backdrop').classList.remove('show');
     document.body.style.overflow = '';
+    KosmoMenuUI.closed();
   }
 
   /* ---------- taal (Google Translate) ---------- */
@@ -167,7 +143,9 @@
 
   function init() {
     if (!D) { document.body.innerHTML = '<p style="padding:40px;color:#fff">Data-laag niet geladen.</p>'; return; }
+    KosmoMenuUI.init(closeSheet);
     $('#backdrop').addEventListener('click', closeSheet);
+    document.querySelectorAll('[data-close]').forEach(function (b) { b.addEventListener('click', closeSheet); });
     document.querySelectorAll('[data-langfloat]').forEach(function (b) { b.addEventListener('click', openLangFloat); });
     var lfc = $('#lf-close'); if (lfc) lfc.addEventListener('click', closeLangFloat);
     var lf = $('#lang-float'); if (lf) lf.addEventListener('click', function (e) { if (e.target === lf) closeLangFloat(); });
