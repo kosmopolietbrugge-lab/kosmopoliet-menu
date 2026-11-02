@@ -67,7 +67,7 @@
     var kind = KosmoMenuUI.kind(cat);
     wrap.appendChild(el('h2', 'cat-title k-' + kind, esc(cat.name)));
     var items = D.getItems(cat.id, true);
-    if (kind === 'special' && D.itemCourse) {
+    if (kind === 'special' && cat.id !== 'specials' && D.itemCourse) {   // Specials houdt de volgorde van de kaart (zelf te schuiven in Menukaart-beheer)
       items = items.map(function (it, i) { return { it: it, i: i, c: D.itemCourse(it) }; })
         .sort(function (a, b) { return a.c - b.c || a.i - b.i; })
         .map(function (o) { return o.it; });
