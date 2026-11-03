@@ -527,6 +527,78 @@
     }
   };
 
+  /* ---- gastkaart (menu.html, website-menu.html, raam-menu.html): teksten in alle zes talen ----
+     De gastpagina's laden enkel dit bestand, dus alles wat een gast kan zien moet hier staan. tests/vertaling.test.js bewaakt dat. */
+  var GAST = {
+    en: {
+      'Nog geen categorieën. Voeg ze toe in de backend.': 'No categories yet. Add them in the backend.', 'Nog geen categorieën': 'No categories yet', 'Bestelling doorgegeven aan tafel': 'Order passed on to table',
+      'Drankje toegevoegd': 'Drink added', 'Tafel {n} is nog niet geopend. Vraag de bediening om je tafel te activeren.': 'Table {n} is not open yet. Ask the staff to activate your table.',
+      'is nog niet geopend. Vraag de bediening om je tafel te activeren': 'is not open yet. Ask the staff to activate your table',
+      'Bestellen lukte niet. Probeer opnieuw': 'Ordering failed. Please try again', 'Bestelling ophalen': 'Loading order',
+      'Je bestelling verschijnt hier zodra ze bevestigd is': 'Your order appears here once it is confirmed', 'Vertaler vereist internet': 'Translator requires internet',
+      'Data-laag niet geladen': 'Data layer not loaded', 'De kaart is nog leeg': 'The menu is still empty',
+      'Deze kaart is enkel om in te kijken. Bestellen kan ter plaatse, aan tafel': 'This menu is for viewing only. You can order on site, at your table',
+      'Prijzen in euro, inclusief btw · Allergenen? Vraag het aan de bediening': 'Prices in euros, including VAT · Allergens? Ask the staff',
+      'Google Translate — meer talen (internet': 'Google Translate — more languages (internet', 'bv': 'e.g', 'Taal / Language': 'Language', 'Google Translate': 'Google Translate'
+    },
+    pt: {
+      'Nog geen categorieën. Voeg ze toe in de backend.': 'Ainda sem categorias. Adicione-as no backend.', 'Nog geen categorieën': 'Ainda sem categorias', 'Bestelling doorgegeven aan tafel': 'Pedido enviado à mesa',
+      'Drankje toegevoegd': 'Bebida adicionada', 'Tafel {n} is nog niet geopend. Vraag de bediening om je tafel te activeren.': 'A mesa {n} ainda não está aberta. Peça à equipe para ativar a sua mesa.',
+      'is nog niet geopend. Vraag de bediening om je tafel te activeren': 'ainda não está aberta. Peça à equipe para ativar a sua mesa',
+      'Bestellen lukte niet. Probeer opnieuw': 'Não foi possível fazer o pedido. Tente novamente', 'Bestelling ophalen': 'Carregando pedido',
+      'Je bestelling verschijnt hier zodra ze bevestigd is': 'O seu pedido aparece aqui assim que for confirmado', 'Vertaler vereist internet': 'O tradutor requer internet',
+      'Data-laag niet geladen': 'Camada de dados não carregada', 'De kaart is nog leeg': 'O cardápio ainda está vazio',
+      'Deze kaart is enkel om in te kijken. Bestellen kan ter plaatse, aan tafel': 'Este cardápio é apenas para consulta. Pode pedir no local, à mesa',
+      'Prijzen in euro, inclusief btw · Allergenen? Vraag het aan de bediening': 'Preços em euros, com IVA incluído · Alérgenos? Pergunte à equipe',
+      'Google Translate — meer talen (internet': 'Google Translate — mais idiomas (internet', 'bv': 'ex', 'Google Translate': 'Google Translate', 'Taal / Language': 'Idioma / Language'
+    },
+    ne: {
+      'Nog geen categorieën. Voeg ze toe in de backend.': 'अझै कोटि छैन। ब्याकइन्डमा थप्नुहोस्।', 'Nog geen categorieën': 'अझै कोटि छैन', 'Bestelling doorgegeven aan tafel': 'अर्डर टेबलमा पठाइयो',
+      'Drankje toegevoegd': 'पेय थपियो', 'Tafel {n} is nog niet geopend. Vraag de bediening om je tafel te activeren.': 'टेबल {n} अझै खुलेको छैन। आफ्नो टेबल सक्रिय गर्न कर्मचारीलाई अनुरोध गर्नुहोस्।',
+      'is nog niet geopend. Vraag de bediening om je tafel te activeren': 'अझै खुलेको छैन। आफ्नो टेबल सक्रिय गर्न कर्मचारीलाई अनुरोध गर्नुहोस्',
+      'Bestellen lukte niet. Probeer opnieuw': 'अर्डर गर्न सकिएन। फेरि प्रयास गर्नुहोस्', 'Bestelling ophalen': 'अर्डर ल्याउँदै',
+      'Je bestelling verschijnt hier zodra ze bevestigd is': 'तपाईंको अर्डर पुष्टि भएपछि यहाँ देखिन्छ', 'Vertaler vereist internet': 'अनुवादकलाई इन्टरनेट चाहिन्छ',
+      'Data-laag niet geladen': 'डाटा तह लोड भएन', 'De kaart is nog leeg': 'मेनु अझै खाली छ',
+      'Deze kaart is enkel om in te kijken. Bestellen kan ter plaatse, aan tafel': 'यो मेनु हेर्नका लागि मात्र हो। अर्डर ठाउँमै, टेबलमा गर्न सकिन्छ',
+      'Prijzen in euro, inclusief btw · Allergenen? Vraag het aan de bediening': 'मूल्य यूरोमा, भ्याट सहित · एलर्जेन? कर्मचारीलाई सोध्नुहोस्',
+      'Google Translate — meer talen (internet': 'Google Translate — थप भाषा (इन्टरनेट', 'bv': 'जस्तै', 'Google Translate': 'Google Translate'
+    },
+    fr: {
+      'Nog geen categorieën. Voeg ze toe in de backend.': 'Pas encore de catégories. Ajoutez-les dans le backend.', 'Nog geen categorieën': 'Pas encore de catégories', 'Bestelling doorgegeven aan tafel': 'Commande transmise à la table',
+      'Drankje toegevoegd': 'Boisson ajoutée', 'Tafel {n} is nog niet geopend. Vraag de bediening om je tafel te activeren.': 'La table {n} n’est pas encore ouverte. Demandez au personnel d’activer votre table.',
+      'is nog niet geopend. Vraag de bediening om je tafel te activeren': 'n’est pas encore ouverte. Demandez au personnel d’activer votre table',
+      'Bestellen lukte niet. Probeer opnieuw': 'La commande a échoué. Veuillez réessayer', 'Bestelling ophalen': 'Chargement de la commande',
+      'Je bestelling verschijnt hier zodra ze bevestigd is': 'Votre commande apparaît ici dès qu’elle est confirmée', 'Vertaler vereist internet': 'Le traducteur nécessite internet',
+      'Data-laag niet geladen': 'Couche de données non chargée', 'De kaart is nog leeg': 'La carte est encore vide',
+      'Deze kaart is enkel om in te kijken. Bestellen kan ter plaatse, aan tafel': 'Cette carte est à consulter uniquement. Vous pouvez commander sur place, à table',
+      'Prijzen in euro, inclusief btw · Allergenen? Vraag het aan de bediening': 'Prix en euros, TVA comprise · Allergènes ? Demandez au personnel',
+      'Google Translate — meer talen (internet': 'Google Translate — plus de langues (internet', 'bv': 'p. ex', 'Google Translate': 'Google Translate'
+    },
+    de: {
+      'Nog geen categorieën. Voeg ze toe in de backend.': 'Noch keine Kategorien. Fügen Sie sie im Backend hinzu.', 'Nog geen categorieën': 'Noch keine Kategorien', 'Bestelling doorgegeven aan tafel': 'Bestellung an den Tisch weitergegeben',
+      'Drankje toegevoegd': 'Getränk hinzugefügt', 'Tafel {n} is nog niet geopend. Vraag de bediening om je tafel te activeren.': 'Tisch {n} ist noch nicht geöffnet. Bitten Sie das Personal, Ihren Tisch zu aktivieren.',
+      'is nog niet geopend. Vraag de bediening om je tafel te activeren': 'ist noch nicht geöffnet. Bitten Sie das Personal, Ihren Tisch zu aktivieren',
+      'Bestellen lukte niet. Probeer opnieuw': 'Bestellung fehlgeschlagen. Bitte versuchen Sie es erneut', 'Bestelling ophalen': 'Bestellung wird geladen',
+      'Je bestelling verschijnt hier zodra ze bevestigd is': 'Ihre Bestellung erscheint hier, sobald sie bestätigt ist', 'Vertaler vereist internet': 'Der Übersetzer benötigt Internet',
+      'Data-laag niet geladen': 'Datenschicht nicht geladen', 'De kaart is nog leeg': 'Die Karte ist noch leer',
+      'Deze kaart is enkel om in te kijken. Bestellen kan ter plaatse, aan tafel': 'Diese Karte dient nur zur Ansicht. Bestellen können Sie vor Ort am Tisch',
+      'Prijzen in euro, inclusief btw · Allergenen? Vraag het aan de bediening': 'Preise in Euro, inkl. MwSt. · Allergene? Fragen Sie das Personal',
+      'Google Translate — meer talen (internet': 'Google Translate — weitere Sprachen (Internet', 'bv': 'z. B', 'Google Translate': 'Google Translate'
+    },
+    es: {
+      'Nog geen categorieën. Voeg ze toe in de backend.': 'Aún no hay categorías. Añádelas en el backend.', 'Nog geen categorieën': 'Aún no hay categorías', 'Bestelling doorgegeven aan tafel': 'Pedido enviado a la mesa',
+      'Drankje toegevoegd': 'Bebida añadida', 'Tafel {n} is nog niet geopend. Vraag de bediening om je tafel te activeren.': 'La mesa {n} aún no está abierta. Pide al personal que active tu mesa.',
+      'is nog niet geopend. Vraag de bediening om je tafel te activeren': 'aún no está abierta. Pide al personal que active tu mesa',
+      'Bestellen lukte niet. Probeer opnieuw': 'No se pudo hacer el pedido. Inténtalo de nuevo', 'Bestelling ophalen': 'Cargando pedido',
+      'Je bestelling verschijnt hier zodra ze bevestigd is': 'Tu pedido aparece aquí en cuanto se confirme', 'Vertaler vereist internet': 'El traductor requiere internet',
+      'Data-laag niet geladen': 'Capa de datos no cargada', 'De kaart is nog leeg': 'La carta aún está vacía',
+      'Deze kaart is enkel om in te kijken. Bestellen kan ter plaatse, aan tafel': 'Esta carta es solo para consultar. Puedes pedir en el local, en la mesa',
+      'Prijzen in euro, inclusief btw · Allergenen? Vraag het aan de bediening': 'Precios en euros, IVA incluido · ¿Alérgenos? Pregunta al personal',
+      'Google Translate — meer talen (internet': 'Google Translate — más idiomas (internet', 'bv': 'p. ej', 'Google Translate': 'Google Translate'
+    }
+  };
+  Object.keys(GAST).forEach(function (l) { DICT[l] = DICT[l] || {}; Object.keys(GAST[l]).forEach(function (k) { DICT[l][k] = GAST[l][k]; }); });
+
   /* ---- opzoeken ----
      Een tekst wordt in deze volgorde gezocht: (1) letterlijk, (2) met getallen als {n}, (3) zonder getallen,
      bedragen en leestekens aan de randen ("12 gerechten" -> "gerechten"), (4) beide samen. Zo hoeft het
