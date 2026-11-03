@@ -527,6 +527,48 @@
     }
   };
 
+  /* ---- opzoeken ----
+     Een tekst wordt in deze volgorde gezocht: (1) letterlijk, (2) met getallen als {n}, (3) zonder getallen,
+     bedragen en leestekens aan de randen ("12 gerechten" -> "gerechten"), (4) beide samen. Zo hoeft het
+     woordenboek geen "Lopende week - week 44" voor elke week te bevatten. Ontbreekt een tekst in de gekozen
+     taal, dan wordt de Engelse vertaling getoond (nooit Nederlands als er Engels bestaat).
+     De test tests/vertaling.test.js gebruikt dezelfde functies (I18N.kern), zodat code en test hetzelfde zoeken. */
+  var EDGE = /^([\s\d€$%.,:;·•…+×*()\[\]\/→←↑↓"'“”‘’!?–—\-]*)([\s\S]*?)([\s\d€$%.,:;·•…+×*()\[\]\/→←↑↓"'“”‘’!?–—\-]*)$/;
+  var NUM = /\d+(?:[.,]\d+)*/g;
+  function norm(s) { return String(s).replace(/\s+/g, ' ').trim(); }
+  function kern(s) { var t = norm(s), e = EDGE.exec(t); return e ? e[2] : t; }
+  function sjabloon(t) { var nums = []; var k = t.replace(NUM, function (x) { nums.push(x); return '{n}'; }); return { k: k, nums: nums }; }
+  function vul(v, nums) { var i = 0; return v.replace(/\{n\}/g, function () { return i < nums.length ? nums[i++] : '{n}'; }); }
+  function hoofd(v, naarKlein) { // eerste letter van de vertaling volgt die van de bron (maar laat afkortingen als OS met rust)
+    var c = v.charAt(0); if (!c || (v.charAt(1) && v.charAt(1) === v.charAt(1).toUpperCase() && /[A-Z]/.test(v.charAt(1)))) return v;
+    return (naarKlein ? c.toLowerCase() : c.toUpperCase()) + v.slice(1);
+  }
+  function find(m, t, alt) {
+    if (!m) return null;
+    if (m[t] != null) return m[t];
+    if (!alt && /[A-Za-z]/.test(t.charAt(0))) { // dezelfde zin met een hoofdletter meer of minder (midden in een zin)
+      var c = t.charAt(0), isKlein = c === c.toLowerCase(), r0 = find(m, (isKlein ? c.toUpperCase() : c.toLowerCase()) + t.slice(1), true);
+      if (r0 != null) return hoofd(r0, isKlein);
+    }
+    var s = /\d/.test(t) ? sjabloon(t) : null;
+    if (s && m[s.k] != null) return vul(m[s.k], s.nums);
+    var e = EDGE.exec(t);
+    if (e && e[2] && e[2] !== t) {
+      if (m[e[2]] != null) return e[1] + m[e[2]] + e[3];
+      var s2 = /\d/.test(e[2]) ? sjabloon(e[2]) : null;
+      if (s2 && m[s2.k] != null) return e[1] + vul(m[s2.k], s2.nums) + e[3];
+    }
+    return null;
+  }
+  var gemist = {};
+  function tr(src) {
+    var t = norm(src); if (!t || lang === 'nl') return src;
+    var r = find(DICT[lang], t); if (r == null && lang !== 'en') r = find(DICT.en, t);
+    if (r == null) { if (lang !== 'nl' && /[A-Za-zÀ-ÿ]{3}/.test(t)) gemist[t] = 1; return src; }
+    return src.match(/^\s*/)[0] + r + src.match(/\s*$/)[0];
+  }
+  function add(l, woorden) { DICT[l] = DICT[l] || {}; for (var k in woorden) if (Object.prototype.hasOwnProperty.call(woorden, k)) DICT[l][k] = woorden[k]; if (document.body) applyAll(); }
+
   var orig = (typeof WeakMap !== 'undefined') ? new WeakMap() : null;
   var mo = null, pending = false;
 
@@ -547,21 +589,19 @@
     nodes.forEach(function (n) {
       var source; if (orig && orig.has(n)) source = orig.get(n); else { source = n.nodeValue; if (orig) orig.set(n, source); }
       if (lang === 'nl') { if (n.nodeValue !== source) n.nodeValue = source; return; }
-      var key = source.trim();
-      var val = (m && m[key] != null) ? source.replace(key, m[key]) : source;
+      var val = tr(source);
       if (n.nodeValue !== val) n.nodeValue = val;
     });
   }
   function translateAttrs(root) {
     var m = DICT[lang];
-    ['placeholder', 'title', 'aria-label'].forEach(function (attr) {
+    ['placeholder', 'title', 'aria-label', 'alt'].forEach(function (attr) {
       root.querySelectorAll('[' + attr + ']').forEach(function (e) {
         if (inSvc(e)) return;
         var store = '__i18n_' + attr;
         var src = e[store]; if (src == null) { src = e.getAttribute(attr) || ''; e[store] = src; }
         if (lang === 'nl') { e.setAttribute(attr, src); return; }
-        var key = src.trim();
-        e.setAttribute(attr, (m && m[key] != null) ? m[key] : src);
+        e.setAttribute(attr, tr(src));
       });
     });
   }
@@ -597,5 +637,6 @@
     applyAll();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
-  window.I18N = { setLang: setLang, getLang: function () { return lang; }, apply: applyAll, pause: pause, resume: resume };
+  window.I18N = { setLang: setLang, getLang: function () { return lang; }, apply: applyAll, pause: pause, resume: resume,
+    add: add, kern: kern, find: find, vertaal: function (l, s) { var oud = lang; lang = l; try { return tr(s); } finally { lang = oud; } }, dict: function () { return DICT; }, missing: function () { return Object.keys(gemist); } };
 })();
