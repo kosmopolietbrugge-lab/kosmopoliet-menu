@@ -585,9 +585,17 @@
   function getOrder(id) { return loadOrders().find(o => o.id === id); }
   function getTableOrders(table) { return loadOrders().filter(o => String(o.table) === String(table)); }
 
-  function placeOrder(table, basketLines) {
+  // Wat de gast zelf koos om op de bon te zetten. Enkel de 14 allergenen en de twee soorten: geen vrije tekst van buitenaf.
+  const BON_ALLERGENEN = ['Gluten', 'Schaaldieren', 'Eieren', 'Vis', 'Pinda', 'Soja', 'Melk', 'Noten', 'Selderij', 'Mosterd', 'Sesam', 'Sulfiet', 'Lupine', 'Weekdieren'];
+  function bonAllergie(a) {
+    if (!a || !Array.isArray(a.lijst)) return '';
+    const lijst = BON_ALLERGENEN.filter(function (x) { return a.lijst.indexOf(x) >= 0; });
+    return lijst.length ? (a.soort === 'intolerantie' ? 'INTOLERANTIE: ' : 'ALLERGIE: ') + lijst.join(', ') : '';
+  }
+  function placeOrder(table, basketLines, allergie) {
     const src = (basketLines && basketLines.length) ? basketLines : getBasket(table);
     if (!src.length) return null;
+    const bonTekst = bonAllergie(allergie);
     // Activatiepoort: enkel bestellen op een door de bediening geactiveerde tafel (gratis tafels uitgezonderd)
     if (!isFreeTable(table) && !isTableActive(table)) return { error: 'not_active', table: String(table) };
     const now = Date.now();
@@ -607,7 +615,7 @@
       return {
         id: uid('ol'), itemId: l.id, name: it.name || 'Onbekend',
         dest: dest, qty: l.qty || 1, price: eff, priceOrig: promoOn ? full : null, promoPct: promoOn ? promoActivePct(it) : 0,
-        note: (l.note || '').slice(0, NOTE_MAX),
+        note: bonTekst ? bonTekst + (l.note ? ' · ' + String(l.note).slice(0, NOTE_MAX) : '') : (l.note || '').slice(0, NOTE_MAX),
         course: dest === 'bar' ? 1 : (Number(it.course) > 0 ? Number(it.course) : (cat && cat.course ? cat.course : 1)),
         vatCode: vatCodeFor(it), vatRate: vatRate(vatCodeFor(it)), paidQty: 0,
         progress: 'blue', confirmed: false, done: false, voided: false,

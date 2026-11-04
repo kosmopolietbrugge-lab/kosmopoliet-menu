@@ -145,3 +145,103 @@
 
   window.KosmoMenuUI = { kind: kind, cats: cats, items: items, price: price, euro: euro, chips: chips, init: init, opened: opened, closed: closed };
 })();
+
+/* ============================================================
+   Allergie of intolerantie? — gedeeld door menu.html (met bestellen) en website-menu.html (enkel kijken).
+   De keuze blijft op het toestel van de gast (sessionStorage); ze gaat enkel mee als de gast ze op de bon wil.
+   De kaart zegt nooit "veilig": altijd "volgens onze recepten".
+   ============================================================ */
+(function () {
+  'use strict';
+  var UI = window.KosmoMenuUI; if (!UI) return;
+  var KEY = 'kosmo-gast-allergeen';
+  var LIJST = ['Gluten', 'Schaaldieren', 'Eieren', 'Vis', 'Pinda', 'Soja', 'Melk', 'Noten', 'Selderij', 'Mosterd', 'Sesam', 'Sulfiet', 'Lupine', 'Weekdieren'];
+  var opt = { bestellen: false, open: function () {}, close: function () {}, opnieuw: function () {} };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  function leeg() { return { lijst: [], soort: 'allergie', toon: false, bon: false }; }
+  function lees() { try { var o = JSON.parse(sessionStorage.getItem(KEY) || 'null'); if (o && Array.isArray(o.lijst)) return o; } catch (e) {} return leeg(); }
+  var st = lees();
+  function bewaar() { try { sessionStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
+  // "NL / EN": in het Nederlands het eerste deel, anders het tweede (als dat er is).
+  function deel(n) { var d = String(n || '').split(' / '), nl = !window.I18N || !window.I18N.getLang || window.I18N.getLang() === 'nl'; return (nl ? d[0] : (d[1] || d[0])).trim(); }
+  // nee = bevat wat de gast koos; vraag = niet na te gaan; ok = volgens de recepten niet aanwezig.
+  function klasse(it, lijst) {
+    var hit = (it.allergens || []).filter(function (a) { return lijst.indexOf(a) >= 0; });
+    if (hit.length) return { k: 'nee', hit: hit };
+    if (!it.allergenInfo || it.allergenInfo.onbekend) return { k: 'vraag', hit: [] };
+    return { k: 'ok', hit: [] };
+  }
+  function spoorHtml(it, hit) {
+    var sporen = (it.allergenInfo && it.allergenInfo.sporen) || [];
+    return hit.map(function (a) {
+      var regels = st.toon ? sporen.filter(function (s) { return s.a === a && (s.i || s.b); }) : [];
+      if (!regels.length) return '<div class="alg-gast-spoor"><span class="allergen">' + esc(a) + '</span></div>';
+      return regels.map(function (s) {
+        return '<div class="alg-gast-spoor"><span class="allergen">' + esc(a) + '</span> ' + [s.i, s.b].filter(Boolean).map(function (x) { return '<span>' + esc(deel(x)) + '</span>'; }).join(' · ') + '</div>';
+      }).join('');
+    }).join('');
+  }
+  function aan() { return st.lijst.length > 0; }
+  // Lijst van één categorie, gesplitst in drie groepen. kaartje(it) tekent het gerecht zoals de pagina dat gewoon doet.
+  function groepen(wrap, items, kaartje) {
+    var g = { ok: [], nee: [], vraag: [] };
+    items.forEach(function (it) { var c = klasse(it, st.lijst); g[c.k].push({ it: it, hit: c.hit }); });
+    var uitleg = document.createElement('p'); uitleg.className = 'alg-gast-uitleg';
+    uitleg.textContent = st.soort === 'intolerantie' ? 'Volgens onze recepten. Kleine sporen zijn mogelijk.' : 'Kruisbesmetting is niet uit te sluiten. Meld je allergie aan de bediening.';
+    wrap.appendChild(uitleg);
+    [['ok', 'Geschikt volgens onze recepten'], ['nee', 'Bevat wat je koos'], ['vraag', st.soort === 'intolerantie' ? 'Vraag het aan de bediening' : 'Niet aangeraden: vraag het aan de bediening']].forEach(function (x) {
+      if (!g[x[0]].length) return;
+      var kop = document.createElement('p'); kop.className = 'block-title alg-gast-kop alg-gast-' + x[0]; kop.textContent = x[1];
+      wrap.appendChild(kop);
+      g[x[0]].forEach(function (r) {
+        var c = kaartje(r.it);
+        if (r.hit.length) { var info = c.querySelector('.info'); var s = document.createElement('div'); s.innerHTML = spoorHtml(r.it, r.hit); if (info) info.insertBefore(s, info.querySelector('.foot')); }
+        wrap.appendChild(c);
+      });
+    });
+  }
+  // Het blok "Allergenen" in het detailscherm.
+  function blok(it) {
+    var alg = it.allergens || [], onbekend = !it.allergenInfo || it.allergenInfo.onbekend, h = alg.map(function (a) { return '<span class="allergen">' + esc(a) + '</span>'; }).join('');
+    if (!alg.length) h = '<span class="allergen none">' + (onbekend ? 'Vraag het aan de bediening' : 'Geen van de 14 wettelijke allergenen gemeld') + '</span>';
+    else if (onbekend) h += '<span class="allergen none">Mogelijk meer: vraag het aan de bediening</span>';
+    var hit = aan() ? klasse(it, st.lijst).hit : [];
+    return '<div class="allergens">' + h + '</div>' + (st.toon && hit.length ? '<div class="alg-gast-detail">' + spoorHtml(it, hit) + '</div>' : '');
+  }
+  function bar() {
+    var host = document.getElementById('alg-bar'); if (!host) return;
+    host.innerHTML = aan()
+      ? '<button type="button" class="alg-gast-knop on"><span>' + (st.soort === 'intolerantie' ? 'Intolerantie' : 'Allergie') + '</span>: ' + st.lijst.map(function (a) { return '<span>' + esc(a) + '</span>'; }).join(', ') + ' <u>Wijzig</u></button>'
+      : '<button type="button" class="alg-gast-knop"><span>Allergie of intolerantie?</span></button>';
+    host.firstChild.addEventListener('click', paneel);
+  }
+  function paneel() {
+    var nu = JSON.parse(JSON.stringify(st)), body = document.getElementById('allergeen-body');
+    function teken() {
+      body.innerHTML =
+        '<h2 class="detail-name">Allergie of intolerantie?</h2>' +
+        '<p class="block-title">Welke allergenen?</p><div class="alg-gast-chips">' + LIJST.map(function (a) { return '<button type="button" class="alg-gast-chip' + (nu.lijst.indexOf(a) >= 0 ? ' on' : '') + '" data-a="' + a + '" aria-pressed="' + (nu.lijst.indexOf(a) >= 0) + '">' + a + '</button>'; }).join('') + '</div>' +
+        '<p class="block-title">Wat is het?</p><div class="alg-gast-soort">' +
+          '<button type="button" class="' + (nu.soort !== 'intolerantie' ? 'on' : '') + '" data-s="allergie" aria-pressed="' + (nu.soort !== 'intolerantie') + '"><b>Allergie</b><small>Ook sporen kunnen gevaarlijk zijn</small></button>' +
+          '<button type="button" class="' + (nu.soort === 'intolerantie' ? 'on' : '') + '" data-s="intolerantie" aria-pressed="' + (nu.soort === 'intolerantie') + '"><b>Intolerantie</b><small>Kleine hoeveelheden gaan meestal</small></button></div>' +
+        '<label class="alg-gast-vink"><input type="checkbox" id="alg-toon"' + (nu.toon ? ' checked' : '') + '> <span>Toon waar het in zit</span></label>' +
+        (opt.bestellen ? '<label class="alg-gast-vink"><input type="checkbox" id="alg-bon"' + (nu.bon ? ' checked' : '') + '> <span>Zet dit op mijn bestelling, zodat de keuken het ziet</span></label>' : '') +
+        '<div class="basket-actions"><button type="button" class="btn-ghost" id="alg-wis">Wissen</button><button type="button" class="btn-primary" id="alg-ok">Toon de kaart</button></div>';
+      body.querySelectorAll('[data-a]').forEach(function (b) { b.addEventListener('click', function () { var a = b.getAttribute('data-a'), i = nu.lijst.indexOf(a); if (i >= 0) nu.lijst.splice(i, 1); else nu.lijst.push(a); lees2(); teken(); }); });
+      body.querySelectorAll('[data-s]').forEach(function (b) { b.addEventListener('click', function () { nu.soort = b.getAttribute('data-s'); lees2(); teken(); }); });
+      document.getElementById('alg-wis').addEventListener('click', function () { pas(leeg()); });
+      document.getElementById('alg-ok').addEventListener('click', function () { lees2(); pas(nu); });
+    }
+    function lees2() { var t = document.getElementById('alg-toon'), o = document.getElementById('alg-bon'); if (t) nu.toon = t.checked; if (o) nu.bon = o.checked; }
+    function pas(n) { st = n; bewaar(); bar(); opt.close(); opt.opnieuw(); }
+    teken();
+    opt.open();
+  }
+  UI.algInit = function (o) { opt = o; bar(); };
+  UI.algAan = aan;
+  UI.algGroepen = groepen;
+  UI.algBlok = blok;
+  UI.algKlasse = klasse;
+  // Enkel als de gast het zelf aanvinkte: wat op de bon komt.
+  UI.algBestelling = function () { return (aan() && st.bon) ? { soort: st.soort, lijst: st.lijst.slice() } : null; };
+})();

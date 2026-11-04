@@ -60,7 +60,8 @@
     wrap.appendChild(el('h2', 'cat-title k-' + kind, esc(cat.name)));
     var items = KosmoMenuUI.items(D, cat);
     if (!items.length) { wrap.appendChild(el('p', 'basket-empty', 'Nog geen gerechten in deze categorie.')); return; }
-    items.forEach(function (it) { wrap.appendChild(itemCard(it)); });
+    if (KosmoMenuUI.algAan()) KosmoMenuUI.algGroepen(wrap, items, itemCard);
+    else items.forEach(function (it) { wrap.appendChild(itemCard(it)); });
   }
 
   function itemCard(it) {
@@ -78,15 +79,12 @@
   function openDetail(id) {
     var it = D.getItem(id); if (!it) return;
     var body = $('#detail-body');
-    var alg = (it.allergens && it.allergens.length)
-      ? it.allergens.map(function (a) { return '<span class="allergen">' + esc(a) + '</span>'; }).join('')
-      : '<span class="allergen none">Geen van de 14 wettelijke allergenen gemeld</span>';
     body.innerHTML =
       '<img class="detail-img" src="' + D.imgFor(it) + '" alt="' + esc(it.name) + '">' +
       '<h2 class="detail-name">' + esc(it.name) + '</h2>' +
       '<p class="detail-long">' + esc(it.long || it.short) + '</p>' +
       (it.extra ? '<div class="detail-extra">' + esc(it.extra) + '</div>' : '') +
-      '<p class="block-title">Allergenen</p><div class="allergens">' + alg + '</div>';
+      '<p class="block-title">Allergenen</p>' + KosmoMenuUI.algBlok(it);
     $('#detail-foot').innerHTML = priceHtml(it, 'detail-price');
     openSheet('detail');
   }
@@ -131,6 +129,7 @@
   function init() {
     if (!D) { document.body.innerHTML = '<p style="padding:40px;color:#fff">Data-laag niet geladen.</p>'; return; }
     KosmoMenuUI.init(closeSheet);
+    KosmoMenuUI.algInit({ bestellen: false, open: function () { openSheet('allergeen'); }, close: closeSheet, opnieuw: renderItems });
     $('#backdrop').addEventListener('click', closeSheet);
     document.querySelectorAll('[data-close]').forEach(function (b) { b.addEventListener('click', closeSheet); });
     document.querySelectorAll('[data-langfloat]').forEach(function (b) { b.addEventListener('click', openLangFloat); });
