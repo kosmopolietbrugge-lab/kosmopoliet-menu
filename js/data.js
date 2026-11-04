@@ -182,9 +182,13 @@
   // categorie is enkel nog een weergavegroep. Bestaande data (enkel cat,
   // geen station) wordt hier eenmalig genormaliseerd: cats = [cat], station
   // = de bron van die categorie op dat moment. Nadien is station leidend.
+  // Receptvoorvoegsels (MRF-, MRD-…) horen bij de recepten, nooit op de kaart. Een toestel met oude code kan ze
+  // wegschrijven (incident 4 nov 2026): klantkaart, publieke kaart, bediening en keuken lezen allemaal via hier.
+  var RECEPT_PREFIX_RE = /^\s*(?:KR|BR|MRF|MRD|BRF|BRD)-\s*/i;
   function normalizeItems(data) {
     var changed = false;
     data.items.forEach(function (it) {
+      if (RECEPT_PREFIX_RE.test(it.name || '')) { it.name = it.name.replace(RECEPT_PREFIX_RE, ''); changed = true; }
       if (!Array.isArray(it.cats)) { it.cats = it.cat ? [it.cat] : []; changed = true; }
       if (!it.station) {
         var c0 = data.categories.find(function (c) { return c.id === it.cats[0]; });
