@@ -2,8 +2,8 @@
    Kosmopoliet — online- en menubakkaart: de hele kaart op één pagina (raam-menu.html)
    Haalt dezelfde gegevens op als de klantkaart en de website-kaart (via menu/gast-sync.js) en gebruikt dezelfde regels voor volgorde,
    soort en prijs (menu/menu-ui.js). Verandert er iets in het OS, dan verandert deze pagina vanzelf mee.
-   Geen mandje, geen tafel: enkel kijken. De pagina zoekt zelf de grootste lettergrootte en het aantal kolommen waarmee alles net op het scherm past.
-   Op een klein scherm (telefoon, kleine laptop) zou dat onleesbaar worden: daar scrolt de kaart gewoon. ?menubak=1 past altijd op het scherm.
+   Geen mandje, geen tafel: enkel kijken. Staand blad: eerst Specials, daaronder eten in 3 kolommen, daaronder dranken in maximaal 3 kolommen.
+   Met ?menubak=1 zoekt de pagina de grootste lettergrootte waarmee het hele blad op het scherm past. Op de website scrolt de kaart gewoon, op een leesbare grootte.
    ============================================================ */
 (function () {
   'use strict';
@@ -23,45 +23,41 @@
     var v = D.getVisual();
     $('#r-logo').src = D.resolveImg(v.logo) || 'assets/img/mark-gold.png';
     $('#r-name').textContent = v.name || 'Kosmopoliet';
-    // Specials staan vooraan, net als op de klantkaart; verder gewoon categorie, naam en prijs.
-    $('#r-cols').innerHTML = UI.cats(D).map(function (c) {
-      var items = UI.items(D, c); if (!items.length) return '';
-      return '<section class="r-cat' + (c.id === 'specials' ? ' r-spec' : '') + '"><h2>' + esc(c.name) + '</h2><ul>' + items.map(function (it) {
-        // De Engelse naam enkel bij gerechten: bij dranken staat er bijna hetzelfde twee keer.
-        var d = String(it.name || '').split(' / ');
-        return '<li class="r-it"><span class="n">' + esc(ucfirst(d[0])) + (d[1] && it.station !== 'barzaal' ? ' <em>' + esc(d.slice(1).join(' / ')) + '</em>' : '') + '</span>' + price(it) + '</li>';
-      }).join('') + '</ul></section>';
-    }).join('') || '<p class="r-empty">De kaart is nog leeg.</p>';
+    // Bovenaan Specials (en Suggesties of Promoties, als die er zijn), daaronder eten, daaronder dranken.
+    var cats = UI.cats(D);
+    function zone(soort) {
+      return cats.filter(function (c) { return UI.kind(c) === soort; }).map(function (c) {
+        var items = UI.items(D, c); if (!items.length) return '';
+        return '<section class="r-cat' + (soort === 'special' ? ' r-spec' : '') + '"><h2>' + esc(c.name) + '</h2><ul>' + items.map(function (it) {
+          // De Engelse naam enkel bij gerechten: bij dranken staat er bijna hetzelfde twee keer.
+          var d = String(it.name || '').split(' / ');
+          return '<li class="r-it"><span class="n">' + esc(ucfirst(d[0])) + (d[1] && it.station !== 'barzaal' ? ' <em>' + esc(d.slice(1).join(' / ')) + '</em>' : '') + '</span>' + price(it) + '</li>';
+        }).join('') + '</ul></section>';
+      }).join('');
+    }
+    var spec = zone('special'), eten = zone('food'), drank = zone('drink');
+    $('#r-spec').innerHTML = spec || (eten || drank ? '' : '<p class="r-empty">De kaart is nog leeg.</p>');
+    $('#r-eten').innerHTML = eten;
+    $('#r-drank').innerHTML = drank;
     fit();
   }
 
   /* ---------- passen ---------- */
-  // Zoekt de combinatie (lettergrootte, aantal kolommen) met de grootste letters die nog net in het scherm past. ?kolommen=3 in het adres dwingt een aantal af.
+  // Menubak: het blad staat rechtop (9:16). Is het scherm zelf staand, dan vult het blad het hele scherm; anders staat het in het midden.
   var raam = document.getElementById('raam'), sheet = document.getElementById('sheet');
-  function fits(u, n) {
-    sheet.style.setProperty('--n', n); raam.style.fontSize = u + 'px';
-    return sheet.offsetHeight <= window.innerHeight + 0.5 && sheet.scrollWidth <= window.innerWidth + 1;
+  function fits(u) {
+    raam.style.fontSize = u + 'px';
+    return sheet.offsetHeight <= window.innerHeight + 0.5 && sheet.scrollWidth <= sheet.clientWidth + 1;
   }
-  var LEESBAAR = 11.5; // kleiner dan dit: niet verder verkleinen maar scrollen (behalve op de menubak)
   function fit() {
-    var q = new URLSearchParams(location.search), menubak = q.get('menubak') === '1';
-    var force = parseInt(q.get('kolommen'), 10), best = { u: 0, n: 3 };
-    document.body.classList.remove('scrol');
-    if (!menubak && window.innerWidth < 760) return scrol();
-    var tries = force >= 1 && force <= 8 ? [force] : [1, 2, 3, 4, 5, 6];
-    tries.forEach(function (n) {
-      var lo = 5, hi = 56;
-      if (!fits(lo, n)) { if (!best.u) best = { u: lo, n: n, over: true }; return; }
-      for (var i = 0; i < 9; i++) { var mid = (lo + hi) / 2; if (fits(mid, n)) lo = mid; else hi = mid; }
-      if (lo > best.u || best.over) best = { u: lo, n: n };
-    });
-    if (!menubak && (best.over || best.u < LEESBAAR)) return scrol();
-    fits(Math.floor(best.u * 10) / 10 || 5, best.n);
-  }
-  function scrol() {
-    document.body.classList.add('scrol');
-    raam.style.fontSize = '';
-    sheet.style.setProperty('--n', window.innerWidth < 760 ? 1 : window.innerWidth < 1100 ? 2 : 3);
+    var menubak = new URLSearchParams(location.search).get('menubak') === '1', w = window.innerWidth, h = window.innerHeight;
+    document.body.classList.toggle('scrol', !menubak);
+    sheet.style.setProperty('--n', menubak || w >= 760 ? 3 : 1);
+    if (!menubak) { raam.style.fontSize = ''; sheet.style.width = ''; return; }
+    sheet.style.width = (w / h > 9 / 16 ? Math.floor(h * 9 / 16) : w) + 'px';
+    var lo = 4, hi = 60;
+    for (var i = 0; i < 10; i++) { var mid = (lo + hi) / 2; if (fits(mid)) lo = mid; else hi = mid; }
+    fits(Math.floor(lo * 10) / 10);
   }
   var _rt; window.addEventListener('resize', function () { clearTimeout(_rt); _rt = setTimeout(fit, 150); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
