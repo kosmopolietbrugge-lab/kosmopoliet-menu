@@ -1,8 +1,9 @@
 /* ============================================================
-   Kosmopoliet — etalagekaart: de hele kaart op één pagina (raam-menu.html)
+   Kosmopoliet — online- en menubakkaart: de hele kaart op één pagina (raam-menu.html)
    Haalt dezelfde gegevens op als de klantkaart en de website-kaart (via menu/gast-sync.js) en gebruikt dezelfde regels voor volgorde,
    soort en prijs (menu/menu-ui.js). Verandert er iets in het OS, dan verandert deze pagina vanzelf mee.
    Geen mandje, geen tafel: enkel kijken. De pagina zoekt zelf de grootste lettergrootte en het aantal kolommen waarmee alles net op het scherm past.
+   Op een klein scherm (telefoon, kleine laptop) zou dat onleesbaar worden: daar scrolt de kaart gewoon. ?menubak=1 past altijd op het scherm.
    ============================================================ */
 (function () {
   'use strict';
@@ -22,25 +23,15 @@
     var v = D.getVisual();
     $('#r-logo').src = D.resolveImg(v.logo) || 'assets/img/mark-gold.png';
     $('#r-name').textContent = v.name || 'Kosmopoliet';
-    $('#r-baseline').textContent = v.baseline || '';
-
-    var cats = UI.cats(D), spec = cats.filter(function (c) { return c.id === 'specials'; })[0], rest = cats.filter(function (c) { return c !== spec; });
-    var sp = $('#r-specials'), cols = $('#r-cols');
-
-    var specItems = spec ? UI.items(D, spec) : [];
-    if (specItems.length) {
-      sp.hidden = false;
-      sp.innerHTML = '<h2 class="r-spec-title">' + esc(spec.name) + '</h2><div class="r-spec-list">' + specItems.map(function (it) {
-        return '<div class="r-card"><b>' + esc(ucfirst(it.name)) + '</b>' + (it.short ? '<small>' + esc(it.short) + '</small>' : '') + price(it) + '</div>';
-      }).join('') + '</div>';
-    } else { sp.hidden = true; sp.innerHTML = ''; }
-
-    cols.innerHTML = rest.map(function (c) {
+    // Specials staan vooraan, net als op de klantkaart; verder gewoon categorie, naam en prijs.
+    $('#r-cols').innerHTML = UI.cats(D).map(function (c) {
       var items = UI.items(D, c); if (!items.length) return '';
-      return '<section class="r-cat k-' + UI.kind(c) + '"><h2>' + esc(c.name) + '</h2><ul>' + items.map(function (it) {
-        return '<li class="r-it"><span class="n">' + esc(ucfirst(it.name)) + '</span><i class="dots"></i>' + price(it) + '</li>';
+      return '<section class="r-cat' + (c.id === 'specials' ? ' r-spec' : '') + '"><h2>' + esc(c.name) + '</h2><ul>' + items.map(function (it) {
+        // De Engelse naam enkel bij gerechten: bij dranken staat er bijna hetzelfde twee keer.
+        var d = String(it.name || '').split(' / ');
+        return '<li class="r-it"><span class="n">' + esc(ucfirst(d[0])) + (d[1] && it.station !== 'barzaal' ? ' <em>' + esc(d.slice(1).join(' / ')) + '</em>' : '') + '</span>' + price(it) + '</li>';
       }).join('') + '</ul></section>';
-    }).join('') || (specItems.length ? '' : '<p class="r-empty">De kaart is nog leeg.</p>');
+    }).join('') || '<p class="r-empty">De kaart is nog leeg.</p>';
     fit();
   }
 
@@ -51,8 +42,12 @@
     sheet.style.setProperty('--n', n); raam.style.fontSize = u + 'px';
     return sheet.offsetHeight <= window.innerHeight + 0.5 && sheet.scrollWidth <= window.innerWidth + 1;
   }
+  var LEESBAAR = 11.5; // kleiner dan dit: niet verder verkleinen maar scrollen (behalve op de menubak)
   function fit() {
-    var force = parseInt(new URLSearchParams(location.search).get('kolommen'), 10), best = { u: 0, n: 3 };
+    var q = new URLSearchParams(location.search), menubak = q.get('menubak') === '1';
+    var force = parseInt(q.get('kolommen'), 10), best = { u: 0, n: 3 };
+    document.body.classList.remove('scrol');
+    if (!menubak && window.innerWidth < 760) return scrol();
     var tries = force >= 1 && force <= 8 ? [force] : [1, 2, 3, 4, 5, 6];
     tries.forEach(function (n) {
       var lo = 5, hi = 56;
@@ -60,7 +55,13 @@
       for (var i = 0; i < 9; i++) { var mid = (lo + hi) / 2; if (fits(mid, n)) lo = mid; else hi = mid; }
       if (lo > best.u || best.over) best = { u: lo, n: n };
     });
+    if (!menubak && (best.over || best.u < LEESBAAR)) return scrol();
     fits(Math.floor(best.u * 10) / 10 || 5, best.n);
+  }
+  function scrol() {
+    document.body.classList.add('scrol');
+    raam.style.fontSize = '';
+    sheet.style.setProperty('--n', window.innerWidth < 760 ? 1 : window.innerWidth < 1100 ? 2 : 3);
   }
   var _rt; window.addEventListener('resize', function () { clearTimeout(_rt); _rt = setTimeout(fit, 150); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);

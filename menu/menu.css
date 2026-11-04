@@ -307,3 +307,8 @@ button.table-badge{ cursor:pointer; font-family:inherit; }
 .alg-gast-soort small{ display:block; font-size:12px; line-height:1.35; margin-top:3px; opacity:.85; }
 .alg-gast-vink{ display:flex; align-items:flex-start; gap:10px; font-size:14px; margin:0 0 12px; cursor:pointer; }
 .alg-gast-vink input{ width:20px; height:20px; flex:none; margin:0; accent-color:var(--gold); }
+.alg-gast-sub{ background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:10px 12px; margin:-6px 0 14px; }
+.alg-gast-sub small{ color:var(--dim); font-size:12px; }
+.alg-gast-sub .alg-gast-chips{ margin:8px 0 0; }
+.alg-gast-chip.klein{ font-size:13px; padding:7px 11px; background:var(--surface); }
+.alg-gast-chip.klein.on{ background:var(--gold); }

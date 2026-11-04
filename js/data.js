@@ -587,10 +587,15 @@
 
   // Wat de gast zelf koos om op de bon te zetten. Enkel de 14 allergenen en de twee soorten: geen vrije tekst van buitenaf.
   const BON_ALLERGENEN = ['Gluten', 'Schaaldieren', 'Eieren', 'Vis', 'Pinda', 'Soja', 'Melk', 'Noten', 'Selderij', 'Mosterd', 'Sesam', 'Sulfiet', 'Lupine', 'Weekdieren'];
+  const ALLERGEEN_SUB = { Gluten: ['Tarwe', 'Spelt', 'Kamut', 'Rogge', 'Gerst', 'Haver'], Noten: ['Amandel', 'Hazelnoot', 'Walnoot', 'Cashew', 'Pecan', 'Paranoot', 'Pistache', 'Macadamia'] };
   function bonAllergie(a) {
     if (!a || !Array.isArray(a.lijst)) return '';
     const lijst = BON_ALLERGENEN.filter(function (x) { return a.lijst.indexOf(x) >= 0; });
-    return lijst.length ? (a.soort === 'intolerantie' ? 'INTOLERANTIE: ' : 'ALLERGIE: ') + lijst.join(', ') : '';
+    const naam = function (x) {
+      const wil = (a.subs && Array.isArray(a.subs[x])) ? a.subs[x] : [], s = (ALLERGEEN_SUB[x] || []).filter(function (y) { return wil.indexOf(y) >= 0; });
+      return s.length ? x + ' (' + s.join(', ') + ')' : x;
+    };
+    return lijst.length ? (a.soort === 'intolerantie' ? 'INTOLERANTIE: ' : 'ALLERGIE: ') + lijst.map(naam).join(', ') : '';
   }
   function placeOrder(table, basketLines, allergie) {
     const src = (basketLines && basketLines.length) ? basketLines : getBasket(table);
@@ -3088,6 +3093,7 @@
   }
 
   window.KosmoData = {
+    ALLERGEEN_SUB: ALLERGEEN_SUB,
     getVisual, setVisual, checkStaffPin, setStaffPin, hasStaffPin,
     getUsers, getUser, authUser, addUser, updateUser, removeUser, roleRank,
     refreshUsers, loginNames, whoAmI, logoutServer,
