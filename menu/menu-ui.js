@@ -164,7 +164,7 @@
   var st = lees();
   function bewaar() { try { sessionStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
   // "NL / EN": in het Nederlands het eerste deel, anders het tweede (als dat er is).
-  function deel(n) { var d = String(n || '').split(' / '), nl = !window.I18N || !window.I18N.getLang || window.I18N.getLang() === 'nl'; return (nl ? d[0] : (d[1] || d[0])).trim(); }
+  function deel(n) { var d = String(n || '').replace(/^\s*(?:KR|BR|MRF|MRD|BRF|BRD)-\s*/i, '').split(' / '), nl = !window.I18N || !window.I18N.getLang || window.I18N.getLang() === 'nl'; return (nl ? d[0] : (d[1] || d[0])).trim(); }
   // nee = bevat wat de gast koos; vraag = niet na te gaan; ok = volgens de recepten niet aanwezig.
   // De subgroepen van dit gerecht; leeg of met '?' = niet (volledig) gekend.
   function subsVan(it, a) {
