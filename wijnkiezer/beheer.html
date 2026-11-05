@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wijnkiezer · Beheer</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#5c1a2b">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="beheer.css">
+</head>
+<body>
+  <div id="gate" class="gate">
+    <form id="gate-f" class="step" style="max-width:340px;margin:12vh auto">
+      <h2>Backoffice</h2>
+      <p class="sub">Geef de beheercode in.</p>
+      <input id="gate-pin" class="search" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Code">
+      <p id="gate-err" class="sub" style="color:#9b3b3b" hidden>Verkeerde code.</p>
+      <button class="cta" style="margin-top:12px">Inloggen</button>
+    </form>
+  </div>
+
+  <div id="app" hidden>
+    <header class="top">
+      <div class="wrap">
+        <div class="brand"><div class="grow"><h1>Backoffice</h1><p id="b-naam">Wijnkiezer</p></div>
+          <a class="cta alt sm" href="index.html?voorbeeld" target="_blank">Voorbeeld ↗</a></div>
+        <nav class="tabs">
+          <button data-v="wijnen" class="on">Wijnen</button>
+          <button data-v="import">Import / export</button>
+          <button data-v="stijl">Huisstijl</button>
+          <button data-v="publiceer">Publiceren <span id="dirty" class="cnt" hidden>!</span></button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div id="draft-note" class="demo-note" hidden>Je hebt wijzigingen die nog niet gepubliceerd zijn. Ze staan veilig in deze browser. <button class="chip" id="draft-drop">Wijzigingen verwerpen</button></div>
+
+      <section id="v-wijnen" class="view on">
+        <div class="row" style="margin-bottom:12px">
+          <input id="q" class="search" style="max-width:320px" type="search" placeholder="Zoek…">
+          <select id="qk" class="search" style="max-width:170px"><option value="">Alle kleuren</option></select>
+          <button class="cta" id="new">+ Nieuwe wijn</button>
+        </div>
+        <p class="count" id="cnt"></p>
+        <div class="tbl-wrap"><table class="tbl" id="tbl"></table></div>
+      </section>
+
+      <section id="v-import" class="view">
+        <div class="step">
+          <h2>Importeren</h2>
+          <p class="sub">CSV (Excel: “Opslaan als CSV”) of JSON. De eerste rij bevat de kolomnamen, zie het sjabloon. Bestaande wijnen worden herkend op <code>id</code> of anders op <code>naam</code> en bijgewerkt.</p>
+          <div class="row">
+            <input type="file" id="imp-file" accept=".csv,.json,.txt">
+            <label class="tog"><input type="radio" name="imp-mode" value="merge" checked> Samenvoegen</label>
+            <label class="tog"><input type="radio" name="imp-mode" value="replace"> Alles vervangen</label>
+          </div>
+          <p class="sub" style="margin-top:10px">Of plak hieronder rijen rechtstreeks uit Excel (tab-gescheiden, met kolomnamen):</p>
+          <textarea id="imp-paste" class="search" rows="5" placeholder="naam	kleur	prijs	land	…"></textarea>
+          <div class="row" style="margin-top:10px"><button class="cta" id="imp-go">Importeer geplakte rijen</button></div>
+          <p id="imp-msg" class="sub" style="margin-top:10px"></p>
+        </div>
+        <div class="step">
+          <h2>Exporteren</h2>
+          <div class="row">
+            <button class="cta alt" id="exp-tpl">Download CSV-sjabloon</button>
+            <button class="cta alt" id="exp-csv">Export CSV</button>
+            <button class="cta alt" id="exp-json">Export JSON (database)</button>
+          </div>
+        </div>
+        <div class="step">
+          <h2>Opkuisen</h2>
+          <div class="row"><button class="cta alt" id="del-demo">Verwijder alle demowijnen</button></div>
+        </div>
+        <div class="step">
+          <h2>Kolommen</h2>
+          <p class="sub" id="cols"></p>
+        </div>
+      </section>
+
+      <section id="v-stijl" class="view">
+        <div class="step">
+          <h2>Huisstijl & gegevens</h2>
+          <p class="sub">Wordt meteen toegepast op de klant-app. Neem de kleurcodes over uit de huisstijlgids of de webshop.</p>
+          <div class="form" id="st-form"></div>
+        </div>
+        <div class="step" id="st-preview">
+          <h2>Voorbeeld</h2>
+          <div class="pv"><div class="pv-top"><b id="pv-naam"></b><small id="pv-base"></small></div><div class="pv-body"><span class="chip on">Gekozen</span> <span class="chip">Optie</span> <button class="cta" style="margin-left:6px">Knop</button><p class="price" style="margin-top:10px">€ 14,50</p></div></div>
+        </div>
+      </section>
+
+      <section id="v-publiceer" class="view">
+        <div class="step">
+          <h2>1 · Controleer</h2>
+          <p class="sub">Bekijk de klant-app met je wijzigingen voor je ze live zet.</p>
+          <a class="cta alt" href="index.html?voorbeeld" target="_blank">Open voorbeeld ↗</a>
+        </div>
+        <div class="step">
+          <h2>2 · Live zetten</h2>
+          <p class="sub">De database is het bestand <code>wijnen.json</code>. Publiceer rechtstreeks naar GitHub (de site wordt binnen ± 1 minuut bijgewerkt), of download het bestand en laat het uploaden.</p>
+          <div class="form">
+            <label>GitHub eigenaar<input id="gh-owner" class="search"></label>
+            <label>Repository<input id="gh-repo" class="search"></label>
+            <label>Branch<input id="gh-branch" class="search"></label>
+            <label>Pad naar bestand<input id="gh-path" class="search"></label>
+            <label class="full">Toegangstoken (fine-grained, enkel “Contents: read &amp; write” op deze repository)<input id="gh-token" class="search" type="password" autocomplete="off" placeholder="github_pat_…"></label>
+            <label class="tog full"><input type="checkbox" id="gh-remember"> Token onthouden op dit toestel</label>
+          </div>
+          <div class="row" style="margin-top:12px"><button class="cta" id="gh-go">Publiceer naar GitHub</button><button class="cta alt" id="dl-json">Download wijnen.json</button></div>
+          <p id="pub-msg" class="sub" style="margin-top:10px"></p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="backdrop" id="bd"></div>
+  <div class="sheet wide" id="sheet" role="dialog" aria-modal="true"><button class="x" id="sx" aria-label="Sluiten">✕</button><div id="ed"></div></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script src="engine.js"></script>
+  <script src="beheer.js"></script>
+</body>
+</html>

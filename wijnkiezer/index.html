@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Wijnkiezer</title>
+  <meta name="description" content="Vind snel de juiste wijn: op smaak, budget en bij je gerecht.">
+  <meta name="theme-color" content="#5c1a2b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <div class="brand">
+        <img id="logo" alt="" hidden>
+        <div class="grow">
+          <h1 id="b-naam">Wijnkiezer</h1>
+          <p id="b-base">Vind de wijn die bij jou past</p>
+        </div>
+      </div>
+      <nav class="tabs" role="tablist">
+        <button data-v="advies" class="on">Advies in 4 stappen</button>
+        <button data-v="alle">Alle wijnen</button>
+        <button data-v="pairing">Bij mijn gerecht</button>
+        <button data-v="bewaard">Bewaard <span id="fav-cnt" class="cnt" hidden>0</span></button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="demo-note" class="demo-note" hidden>Testversie: wijnen met “Demo ·” in de naam zijn voorbeelddata. In de backoffice vervang je ze door de echte technische fiches.</div>
+
+    <!-- 1. Advies-wizard -->
+    <section id="v-advies" class="view on">
+      <div class="step">
+        <h2>1 · Waarvoor zoek je een wijn?</h2>
+        <p class="sub">Kies wat het best past, je kan alles nog aanpassen.</p>
+        <div class="choices" id="w-gel"></div>
+      </div>
+      <div class="step">
+        <h2>2 · Welke stijl drink je graag?</h2>
+        <p class="sub">Niet zeker? Kies “Verras me”.</p>
+        <div class="choices" id="w-stijl"></div>
+        <p class="sub" style="margin-top:12px">Kleur (optioneel)</p>
+        <div class="chips" id="w-kleur"></div>
+      </div>
+      <div class="step" id="w-step-dish">
+        <h2>3 · Wat eet je erbij?</h2>
+        <p class="sub">Optioneel: kies één of meer hoofdingrediënten.</p>
+        <div class="chips" id="w-ing"></div>
+      </div>
+      <div class="step">
+        <h2>4 · Budget per fles</h2>
+        <div class="chips" id="w-bud"></div>
+        <label class="tog" style="margin-top:12px"><input type="checkbox" id="w-vegan"> Enkel vegan wijnen</label>
+        <label class="tog"><input type="checkbox" id="w-bio"> Enkel bio</label>
+      </div>
+      <div class="row"><button class="cta" id="w-go">Toon mijn wijnen</button><button class="cta alt" id="w-reset">Opnieuw</button></div>
+      <div id="w-res" style="margin-top:20px"></div>
+    </section>
+
+    <!-- 2. Alle wijnen -->
+    <section id="v-alle" class="view">
+      <button class="cta alt filter-toggle" id="ft">Filters</button>
+      <div class="layout">
+        <aside class="filters" id="filters">
+          <input class="search" id="f-q" type="search" placeholder="Zoek op naam, druif, regio…">
+          <h3>Kleur</h3><div class="chips" id="f-kleur"></div>
+          <h3>Prijs (€)</h3>
+          <div class="range"><input id="f-min" type="number" min="0" placeholder="min"> – <input id="f-max" type="number" min="0" placeholder="max"></div>
+          <h3>Smaak</h3><div id="f-smaak"></div>
+          <h3>Past bij</h3><div class="chips" id="f-pair"></div>
+          <h3>Land</h3><div class="chips" id="f-land"></div>
+          <h3>Extra</h3>
+          <label class="tog"><input type="checkbox" id="f-vegan"> Vegan</label>
+          <label class="tog"><input type="checkbox" id="f-bio"> Bio</label>
+          <h3>Sorteren</h3>
+          <select id="f-sort" class="search"><option value="match">Beste match</option><option value="prijs">Prijs laag → hoog</option><option value="prijs-">Prijs hoog → laag</option><option value="naam">Naam</option></select>
+          <p style="margin-top:12px"><button class="chip" id="f-reset">Wis filters</button></p>
+        </aside>
+        <div><p class="count" id="f-count"></p><div class="grid" id="f-list"></div></div>
+      </div>
+    </section>
+
+    <!-- 3. Food pairing -->
+    <section id="v-pairing" class="view">
+      <div class="step">
+        <h2>Wat staat er op het bord?</h2>
+        <p class="sub">Hoe meer je aanduidt, hoe preciezer het advies.</p>
+        <p class="sub"><b>Hoofdingrediënt</b></p><div class="chips" id="p-ing"></div>
+        <p class="sub" style="margin-top:12px"><b>Bereiding</b></p><div class="chips" id="p-ber"></div>
+        <p class="sub" style="margin-top:12px"><b>Dominante smaken & saus</b></p><div class="chips" id="p-sm"></div>
+        <p class="sub" style="margin-top:12px"><b>Hoe krachtig is het gerecht?</b></p>
+        <div class="inten" id="p-int"></div>
+      </div>
+      <div id="p-res"></div>
+    </section>
+
+    <!-- 4. Bewaard -->
+    <section id="v-bewaard" class="view">
+      <div class="row" style="margin-bottom:12px"><button class="cta alt" id="fav-share">Deel mijn lijstje</button><button class="cta alt" onclick="print()">Afdrukken</button></div>
+      <div class="grid" id="fav-list"></div>
+    </section>
+  </main>
+
+  <footer id="foot"></footer>
+
+  <div class="backdrop" id="bd"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true"><button class="x" id="sx" aria-label="Sluiten">✕</button><div id="sheet-body"></div></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
