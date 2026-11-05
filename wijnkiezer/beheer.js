@@ -214,7 +214,7 @@
 
   /* ---------- huisstijl ---------- */
   var STF = [
-    ['naam', 'Naam zaak', 'text'], ['baseline', 'Baseline', 'text'], ['webshop', 'Webshop-URL', 'url'], ['contact', 'Contactregel (footer)', 'text'],
+    ['naam', 'Naam zaak', 'text'], ['baseline', 'Baseline', 'text'], ['webshop', 'Webshop-URL', 'url'], ['contact', 'Contactregel (footer)', 'text'], ['email', 'E-mail voor cadeau- en eventbestellingen', 'email'],
     ['logo', 'Logo-URL (png/svg, liefst wit of transparant)', 'url'],
     ['k.primair', 'Hoofdkleur', 'color'], ['k.accent', 'Accentkleur', 'color'], ['k.achtergrond', 'Achtergrond', 'color'], ['k.oppervlak', 'Kaarten', 'color'], ['k.tekst', 'Tekst', 'color'],
     ['fontTitel', 'Lettertype titels (CSS)', 'text'], ['fontTekst', 'Lettertype tekst (CSS)', 'text'],

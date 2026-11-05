@@ -28,6 +28,7 @@
     document.querySelectorAll('.tabs button').forEach(function (x) { x.classList.toggle('on', x.dataset.v === v); });
     document.querySelectorAll('.view').forEach(function (x) { x.classList.toggle('on', x.id === 'v-' + v); });
     if (v === 'alle') renderList(); if (v === 'bewaard') renderFavs(); if (v === 'pairing') renderPair();
+    if (window.WKTools && WKTools[v]) WKTools[v]();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -120,6 +121,7 @@
   $('w-reset').onclick = function () { wz = { gel: 'zomaar', stijl: 'verras', kleuren: [], ing: [], bud: '' }; $('w-vegan').checked = $('w-bio').checked = false; $('w-res').innerHTML = ''; renderWizard(); bindAll(); };
   function bindAll() { bindSingle($('w-gel'), 'gel', renderWizard); bindSingle($('w-stijl'), 'stijl', renderWizard); bindMulti(wz, $('w-kleur'), 'kleuren', renderWizard); bindMulti(wz, $('w-ing'), 'ing', renderWizard); bindSingle($('w-bud'), 'bud', renderWizard); }
 
+  $('w-gel').addEventListener('click', function (e) { var b = e.target.closest('[data-k]'); if (b && b.dataset.k === 'cadeau' && window.WK) WK.toast('Tip: probeer ook het tabblad “Cadeau”'); });
   $('w-go').onclick = function () {
     var b = wz.bud ? wz.bud.split('-').map(Number) : [null, null];
     var f = { kleuren: wz.kleuren.slice(), prijsMin: b[0], prijsMax: b[1], vegan: $('w-vegan').checked, bio: $('w-bio').checked };
@@ -224,7 +226,10 @@
     $('demo-note').hidden = !(ST.toonDemo !== false && WINES.some(function (w) { return w.bron === 'demo' && w.actief; }));
     $('foot').innerHTML = esc(ST.naam || '') + (ST.contact ? ' · ' + esc(ST.contact) : '') + (ST.webshop ? ' · <a href="' + esc(ST.webshop) + '" target="_blank" rel="noopener">webshop</a>' : '') +
       (params.has('voorbeeld') ? '<br><b>Voorbeeldweergave van niet-gepubliceerde wijzigingen</b>' : '');
+    window.WK = { card: card, wines: function () { return WINES; }, st: function () { return ST; }, toast: toast, show: show, isFav: isFav, toggleFav: toggleFav, openFiche: openFiche };
+    if (window.WKTools && WKTools.init) WKTools.init();
     renderWizard(); renderFilters(); updFavCnt();
+    if (params.get('tab')) show(params.get('tab'));
     if (params.get('lijst')) show('bewaard');
     var m = location.hash.match(/w=([^&]+)/); if (m) openFiche(decodeURIComponent(m[1]));
   }).catch(function (e) {

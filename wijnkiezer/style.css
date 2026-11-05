@@ -126,3 +126,34 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:24px 16px}
   .top{padding-top:12px}
 }
 @media print{.top,.filters,.filter-toggle,footer{display:none}.card{break-inside:avoid}}
+
+/* cadeaumodus & hoeveelheidscalculator */
+.gift{display:flex;flex-direction:column}
+.gift.on{border-color:var(--primair);box-shadow:inset 0 0 0 1px var(--primair)}
+.gift .cta{align-self:flex-start;margin-top:auto}
+.gift-t{font-family:var(--fd);font-size:18px;font-weight:400}
+.gift-l{list-style:none;padding:0;margin:10px 0 4px;display:grid;gap:4px;font-size:14.5px}
+.gift-l a{color:var(--text);text-decoration:none;border-bottom:1px dotted var(--dim)}
+.hv-in{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.hv-in label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--dim)}
+.hv-in input{color:var(--text)}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:4px 0 12px}
+.kpi-row div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.kpi-row b{display:block;font-family:var(--fd);font-size:26px;font-weight:400;color:var(--primair)}
+.kpi-row small{color:var(--dim)}
+.tbl-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th,.tbl td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left}
+.tbl th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);background:var(--bg)}
+.hv-n{white-space:nowrap}
+.hv-n .chip{padding:2px 10px}
+.hv-sel{min-width:200px;padding:7px 8px}
+@media (max-width:760px){.hv-t td,.hv-t th{padding:8px 6px}.hv-sel{min-width:150px}}
+@media (max-width:600px){
+  .hv-t tr:first-child{display:none}
+  .hv-t tr{display:grid;grid-template-columns:auto 1fr auto;align-items:center;border-bottom:1px solid var(--line)}
+  .hv-t td{border:0}
+  .hv-t td:nth-child(3){grid-column:1/-1;grid-row:2;padding-top:0}
+  .hv-t td:nth-child(4){grid-column:3;grid-row:1}
+  .hv-sel{width:100%;min-width:0}
+}

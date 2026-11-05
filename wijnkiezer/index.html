@@ -26,6 +26,8 @@
         <button data-v="advies" class="on">Advies in 4 stappen</button>
         <button data-v="alle">Alle wijnen</button>
         <button data-v="pairing">Bij mijn gerecht</button>
+        <button data-v="cadeau">Cadeau</button>
+        <button data-v="hoeveel">Hoeveel flessen?</button>
         <button data-v="bewaard">Bewaard <span id="fav-cnt" class="cnt" hidden>0</span></button>
       </nav>
     </div>
@@ -100,6 +102,10 @@
       <div id="p-res"></div>
     </section>
 
+    <!-- Cadeaumodus en hoeveelheidscalculator: opgebouwd door tools.js -->
+    <section id="v-cadeau" class="view"></section>
+    <section id="v-hoeveel" class="view"></section>
+
     <!-- 4. Bewaard -->
     <section id="v-bewaard" class="view">
       <div class="row" style="margin-bottom:12px"><button class="cta alt" id="fav-share">Deel mijn lijstje</button><button class="cta alt" onclick="print()">Afdrukken</button></div>
@@ -114,6 +120,7 @@
   <div id="toast" role="status" aria-live="polite"></div>
 
   <script src="engine.js"></script>
+  <script src="tools.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
