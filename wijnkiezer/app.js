@@ -36,6 +36,8 @@
       prijsMin: p[0] > 0 ? p[0] : null, prijsMax: p[1] < PMAX ? p[1] : null };
   }
   function f(extra) { return W.filter(WINES, Object.assign(preF(), extra || {}), ST); }
+  // header wordt zwart bij scrollen, zoals op de webshop
+  window.addEventListener('scroll', function () { $('top').classList.toggle('dark', window.scrollY > 60); }, { passive: true });
   function fmtP(v, kant) { return kant === 'max' && v >= PMAX ? '€ ' + PMAX + '+' : '€ ' + v; }
   function activePre() {
     var a = [];
@@ -135,28 +137,44 @@
   }
 
   /* ---------- kaart ---------- */
+  function prijsTxt(w, groot) {
+    if (ST.prijzenTonen === false) return '';
+    if (w.prijs == null) return '<span class="meta">' + esc(ST.prijsOpAanvraag || 'Prijs op aanvraag') + '</span>';
+    return W.euro(w.prijs) + ' incl. btw' + (w.inhoud && w.inhoud !== 75 ? ' <small class="meta">(' + String(w.inhoud).replace('.', ',') + ' cl)</small>' : '');
+  }
+  function stockInfo(w) {
+    var m = ST.stockTonen || 'status', d = +ST.laagStock || 0;
+    if (!w.voorraad) return { cls: 'out', t: ST.nietOpVoorraadTekst || 'Niet op voorraad' };
+    if (m === 'aantal' && w.stock != null) return { cls: w.stock <= d ? 'low' : '', t: w.stock + ' op voorraad' };
+    if (m !== 'nee' && w.stock != null && d && w.stock <= d) return { cls: 'low', t: 'Nog ' + w.stock + ' fles' + (w.stock === 1 ? '' : 'sen') };
+    return null;
+  }
+  function bestelbaar(w) { return ST.bestelModus !== 'uit' && !(ST.nietOpVoorraad === 'niet-bestelbaar' && !w.voorraad); }
+  function kenmerken(w) {
+    var k = [w.land, W.label(W.KLEUREN, w.kleur)];
+    if (w.alcohol != null && w.alcohol <= 0.5) k.push('Zonder alcohol');
+    if (w.vegan === true) k.push('Vegan'); if (w.bio) k.push('Bio'); if (w.biodynamisch) k.push('Biodynamisch'); if (w.natuurwijn) k.push('Natuurwijn');
+    return k.filter(Boolean).join(', ');
+  }
   function card(w, extra) {
     extra = extra || {};
-    var tags = '';
-    if (w.vegan === true) tags += '<span class="tag v">Vegan</span>';
-    if (w.bio) tags += '<span class="tag v">Bio</span>';
-    if (w.biodynamisch) tags += '<span class="tag v">Biodynamisch</span>';
-    if (w.natuurwijn) tags += '<span class="tag v">Natuurwijn</span>';
-    if (!w.voorraad) tags += '<span class="tag out">Niet op voorraad</span>';
+    var tags = '', si = stockInfo(w);
+    if (si && ST.stockTonen !== 'nee') tags += '<span class="tag ' + si.cls + '">' + esc(si.t) + '</span>';
     if (w.bron === 'demo') tags += '<span class="tag d">Demo</span>';
     w.aromas.slice(0, 3).forEach(function (a) { tags += '<span class="tag">' + esc(a) + '</span>'; });
     var why = '';
     if (extra.redenen && extra.redenen.length) why = '<ul class="why">' + extra.redenen.slice(0, 3).map(function (r) { return '<li class="' + (r.plus ? '' : 'min') + '">' + esc(r.t) + '</li>'; }).join('') + '</ul>';
     return '<article class="card" data-id="' + esc(w.id) + '">' +
       (extra.score != null ? '<div class="match" title="Match">' + extra.score + '%</div>' : '') +
-      '<div class="kl"><span class="dot k-' + w.kleur + '"></span>' + esc(W.label(W.KLEUREN, w.kleur)) + (w.jaar ? ' · ' + esc(w.jaar) : '') + '</div>' +
+      '<div class="ph">' + (w.foto ? '<img src="' + esc(w.foto) + '" alt="" loading="lazy">' : W.fles(w.kleur)) +
+      '<div class="ov"><span>' + esc(kenmerken(w)) + '</span>' + (bestelbaar(w) ? '<button class="cta" data-add="' + esc(w.id) + '">' + esc(ST.knopTekst || 'Toevoegen aan winkelwagen') + '</button>' : '') + '</div></div>' +
       '<h3>' + esc(w.naam) + '</h3>' +
       '<div class="meta">' + esc([w.land, w.regio].filter(Boolean).join(' · ')) + (w.druiven.length ? ' — ' + esc(w.druiven.join(', ')) : '') + '</div>' +
       (w.omschrijving ? '<p class="desc">' + esc(w.omschrijving) + '</p>' : '') +
-      '<div class="tags">' + tags + '</div>' + why +
-      '<div class="card-foot"><span class="price">' + (w.prijs == null ? '<span class="meta">Prijs op aanvraag</span>' : W.euro(w.prijs)) + (w.inhoud && w.inhoud !== 75 ? ' <small class="meta">(' + w.inhoud + ' cl)</small>' : '') + '</span>' +
+      (tags ? '<div class="tags">' + tags + '</div>' : '') + why +
+      '<div class="card-foot"><span class="price">' + prijsTxt(w) + '</span>' +
       '<button class="ic" data-fav="' + esc(w.id) + '" aria-label="Bewaar">' + (isFav(w.id) ? '♥' : '♡') + '</button>' +
-      (ST.bestellen !== false ? '<button class="ic add" data-add="' + esc(w.id) + '" aria-label="In mandje">+</button>' : '') + '</div>' +
+      (bestelbaar(w) ? '<button class="ic add" data-add="' + esc(w.id) + '" aria-label="Toevoegen">+</button>' : '') + '</div>' +
       '</article>';
   }
   document.addEventListener('click', function (e) {
@@ -181,16 +199,16 @@
       ['Jaargang', w.jaar], ['Druiven', w.druiven.join(', ')], ['Alcohol', w.alcohol != null ? String(w.alcohol).replace('.', ',') + ' %' : ''],
       ['Inhoud', w.inhoud ? w.inhoud + ' cl' : ''], ['Serveren', w.serveertemp], ['Vegan', W.veganLabel(w.vegan).replace('Vegan: ', '')],
       ['Bio', w.bio ? 'ja' : ''], ['Biodynamisch', w.biodynamisch ? 'ja' : ''], ['Natuurwijn', w.natuurwijn ? 'ja' : ''], ['Sulfieten', w.sulfietarm ? 'geen toegevoegd' : ''],
-      ['Voorraad', w.voorraad ? 'op voorraad' : 'niet op voorraad']
+      ['Voorraad', ST.stockTonen === 'nee' ? '' : (stockInfo(w) || { t: 'op voorraad' }).t]
     ].filter(function (s) { return s[1]; });
-    var url = w.url || ST.webshop || '';
+    var url = w.url || (window.WKOrder ? WKOrder.zoekUrl(w) : '') || ST.webshop || '';
     var pairByGroup = {};
     w.pairing.forEach(function (p) { var g = W.GROEP_VAN[p] || p; (pairByGroup[g] = pairByGroup[g] || []).push(p); });
     $('sheet-body').innerHTML = '<div class="fiche">' +
-      (w.foto ? '<img class="img" src="' + esc(w.foto) + '" alt="">' : '') +
+      '<div class="img">' + (w.foto ? '<img src="' + esc(w.foto) + '" alt="" style="max-width:100%">' : W.fles(w.kleur)) + '</div>' +
       '<div class="kl up" style="color:var(--dim);display:flex;gap:6px;align-items:center"><span class="dot k-' + w.kleur + '"></span>' + esc(W.label(W.KLEUREN, w.kleur)) + '</div>' +
       '<h2>' + esc(w.naam) + '</h2>' +
-      '<p class="price" style="font-size:22px;margin:8px 0">' + W.euro(w.prijs) + '</p>' +
+      '<p class="price" style="font-size:24px;margin:8px 0">' + prijsTxt(w) + '</p>' +
       (w.omschrijving ? '<p>' + esc(w.omschrijving) + '</p>' : '') +
       '<div class="spec">' + spec.map(function (s) { return '<div><small>' + esc(s[0]) + '</small>' + esc(s[1]) + '</div>'; }).join('') + '</div>' +
       '<h3>Smaakprofiel</h3>' + W.bars(w.smaak) +
@@ -200,10 +218,10 @@
       }).join('') + '</div>' : '') +
       (w.bron === 'kosmopoliet-kaart' ? '<p class="meta" style="margin-top:14px">Profiel afgeleid uit de proefnotitie; technische fiche nog te koppelen.</p>' : '') +
       '<div class="sheet-foot row">' +
-      (ST.bestellen !== false ? '<div class="qty"><button data-q="-1" aria-label="min">−</button><input id="fq" type="number" min="1" value="1"><button data-q="1" aria-label="plus">+</button></div>' +
-        '<button class="cta" id="f-add">In mandje</button>' : '') +
+      (bestelbaar(w) ? '<div class="qty"><button data-q="-1" aria-label="min">−</button><input id="fq" type="number" min="1" value="1"><button data-q="1" aria-label="plus">+</button></div>' +
+        '<button class="cta" id="f-add">' + esc(ST.knopTekst || 'Toevoegen aan winkelwagen') + '</button>' : '') +
       '<button class="cta alt" data-fav="' + esc(w.id) + '">' + (isFav(w.id) ? '♥ Bewaard' : '♡ Bewaar') + '</button>' +
-      (url ? '<a class="lnk" href="' + esc(url) + '" target="_blank" rel="noopener">' + (w.url ? 'Bekijk in de webshop' : 'Naar de webshop') + ' ↗</a>' : '') + '</div></div>';
+      (url ? '<a class="lnk" href="' + esc(url) + '" target="_blank" rel="noopener">Bekijk in de webshop ↗</a>' : '') + '</div></div>';
     var fq = $('fq');
     if (fq) {
       $('sheet-body').querySelectorAll('[data-q]').forEach(function (b) { b.onclick = function () { fq.value = Math.max(1, (+fq.value || 1) + +b.dataset.q); }; });
@@ -358,15 +376,25 @@
     if (ST.naam) { $('b-naam').textContent = ST.naam; document.title = 'Wijnkiezer · ' + ST.naam; $('logo').alt = ST.naam; }
     if (ST.baseline) $('b-base').textContent = ST.baseline;
     if (ST.logo) $('logo').src = ST.logo;
-    if (ST.bestellen === false) $('cart-open').hidden = true;
+    if (ST.bestelModus === 'uit') $('cart-open').hidden = true;
+    if (ST.topbar || ST.email) {
+      $('topbar').hidden = false;
+      $('tb-l').innerHTML = String(ST.topbar || '').split('|').map(function (x) { x = x.trim(); if (!x) return ''; var m = x.match(/^(\S+)\s+(.+)$/); return '<span>' + (m && /\d/.test(m[2]) ? '<b>' + esc(m[1]) + '</b> <a href="tel:' + esc(m[2].replace(/\s/g, '')) + '" style="font-weight:400">' + esc(m[2]) + '</a>' : esc(x)) + '</span>'; }).join('');
+      $('tb-r').textContent = ST.email || ''; $('tb-r').href = 'mailto:' + (ST.email || '');
+    }
+    var ond = ST.onderdelen || {}, eerste = null;
+    document.querySelectorAll('.tabs button').forEach(function (b) { var aan = ond[b.dataset.v] !== false; b.hidden = !aan; if (aan && !eerste) eerste = b.dataset.v; });
+    if (ond.advies === false && eerste) show(eerste);
     $('demo-note').hidden = !(ST.toonDemo !== false && WINES.some(function (w) { return w.bron === 'demo' && w.actief; }));
-    $('foot').innerHTML = (ST.logo || true ? '<img src="' + esc(ST.logo || 'logo.png') + '" alt="">' : '') + esc(ST.naam || '') + (ST.contact ? ' · ' + esc(ST.contact) : '') +
+    $('foot').innerHTML = '<img src="logo-wit.png" alt="">' + esc(ST.naam || '') + (ST.contact ? ' · ' + esc(ST.contact) : '') +
+      (ST.leverVoorwaarden ? ' · <a href="#" id="lv-open">Leveringsvoorwaarden</a>' : '') +
       (ST.webshop ? ' · <a href="' + esc(ST.webshop) + '" target="_blank" rel="noopener">webshop</a>' : '') +
       (params.has('voorbeeld') ? '<br><b>Voorbeeldweergave van niet-gepubliceerde wijzigingen</b>' : '');
 
     window.WK = { card: card, wines: function () { return WINES; }, st: function () { return ST; }, f: f, pre: function () { return pre; }, prijs: prijs, pmax: function () { return PMAX; },
-      budgetSlider: budgetSlider, ingPicker: ingPicker, toast: toast, show: show, isFav: isFav, toggleFav: toggleFav, openFiche: openFiche, openSheet: openSheet, closeSheet: closeSheet };
+      budgetSlider: budgetSlider, ingPicker: ingPicker, bestelbaar: bestelbaar, prijsTxt: prijsTxt, toast: toast, show: show, isFav: isFav, toggleFav: toggleFav, openFiche: openFiche, openSheet: openSheet, closeSheet: closeSheet };
     if (window.WKOrder) WKOrder.init();
+    document.addEventListener('click', function (e) { if (e.target.id === 'lv-open') { e.preventDefault(); $('sheet-body').innerHTML = '<h2 style="font-size:28px;margin-bottom:12px">Leveringsvoorwaarden</h2><div style="white-space:pre-wrap">' + esc(ST.leverVoorwaarden) + '</div>'; openSheet(); } });
     if (window.WKTools && WKTools.init) WKTools.init();
 
     renderWizard(); renderFilters(); renderPairChips(); updFavCnt(); renderPrebar();

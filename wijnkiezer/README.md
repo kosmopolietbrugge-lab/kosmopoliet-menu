@@ -9,11 +9,13 @@ Het is een statische PWA: geen server nodig, installeerbaar op gsm/tablet ("Zet 
 | Pagina | Voor wie | Wat |
 |---|---|---|
 | `index.html` | klanten | Advies in 4 stappen, alle wijnen met filters, "Bij mijn gerecht" (food pairing), cadeaumodus, hoeveelheidscalculator, bewaarde wijnen, voorkeuren (preselectie), mandje en bestellen |
-| `beheer.html` | zaakvoerder | Backoffice: wijnen toevoegen en bewerken, CSV/Excel-import, huisstijl en bestelinstellingen, bestellingen opvolgen, publiceren |
+| `over.html` | zaakvoerder | Presentatie van alle mogelijkheden, de link om door te sturen |
+| `beheer.html` | zaakvoerder | Backoffice: wijnen, import/export, instellingen (levering, voorraad, prijzen, bestellen), huisstijl, publiceren |
 | `horeca.html` | keuken & zaal | Pairing per gerecht van de menukaart, compacte wijnkaart die heel het menu dekt, prijscalculator |
 
 Na publicatie op GitHub Pages:
 
+- Presentatie (om door te sturen): `https://kosmopolietbrugge-lab.github.io/kosmopoliet-menu/wijnkiezer/over.html`
 - Klant-app: `https://kosmopolietbrugge-lab.github.io/kosmopoliet-menu/wijnkiezer/`
 - Backoffice: `…/wijnkiezer/beheer.html` (code: `1234`, wijzig die in Huisstijl)
 - Horeca: `…/wijnkiezer/horeca.html`
@@ -30,7 +32,7 @@ De beheercode is alleen een drempel: de echte beveiliging is het GitHub-token. Z
 
 ### Velden per wijn
 
-`id, naam, producent, jaar, kleur, land, regio, druiven, prijs, inkoop, inhoud, alcohol, vegan, bio, biodynamisch, natuurwijn, sulfietarm, voorraad, smaak{body, zoet, zuur, tannine, fruit, hout}, aromas, pairing, serveertemp, omschrijving, url, foto, actief, uitgelicht, bron`
+`id, naam, producent, jaar, kleur, land, regio, druiven, prijs, inkoop, inhoud, alcohol, vegan, bio, biodynamisch, natuurwijn, sulfietarm, voorraad, stock, webshopId, smaak{body, zoet, zuur, tannine, fruit, hout}, aromas, pairing, serveertemp, omschrijving, url, foto, actief, uitgelicht, bron`
 
 - `kleur`: rood, wit, rose, bubbels, zoet, versterkt
 - smaakassen: 1 (weinig) tot 5 (veel)
@@ -47,7 +49,7 @@ De beheercode is alleen een drempel: de echte beveiliging is het GitHub-token. Z
   - kaas: kaas-zacht, geitenkaas, kaas-hard, kaas-blauw
   - dessert: fruitdessert, chocolade, karamel-noten
 - `voorraad`: true / false (niet op voorraad = toch bestelbaar, met vermelding)
-- `bron`: fiche, kosmopoliet-kaart, demo
+- `bron`: fiche, webshop, kosmopoliet-kaart, demo
 - `inkoop`: horecaprijs excl. btw (wordt alleen gebruikt in de prijscalculator van horeca.html, niet getoond aan klanten)
 
 In de backoffice kan je onder Import / export een CSV-sjabloon downloaden met precies deze kolommen.
@@ -75,19 +77,27 @@ Knop **Voorkeuren** rechtsboven. Wat je hier kiest, geldt voor alle onderdelen: 
 
 ## Bestellen
 
-1. **Mandje**: met + op een wijn, vanuit de fiche (met aantal), vanuit cadeau en hoeveelheden (het kaartje en de inpakwens gaan mee als notitie) of vanuit Bewaard.
-2. **Gegevens**: particulier of bedrijf/horeca (bedrijfsnaam, btw-nummer, referentie, facturatieadres, prijzen ook excl. btw), afhalen of levering, gewenste datum, opmerking, akkoord en 18+.
-3. **Bevestiging** met bestelnummer. Klanten zien hun vorige bestellingen en kunnen die opnieuw bestellen.
+Instelbaar in de backoffice > Instellingen > Bestellen:
 
-Er is geen online betaling: betalen bij afhaling of levering.
+- **Via de eigen webshop** (standaard). De klant stelt een selectie samen (knop "Toevoegen aan winkelwagen" of +) en kiest "Afrekenen in de webshop". De app zet elk product één voor één in de winkelwagen van de webshop, via de link `{webshop}/?add-to-cart={id}&quantity={n}`, en opent daarna de winkelwagen. Daarvoor heeft elke wijn een **webshop-product-ID** nodig (veld `webshopId`). Zonder ID linkt de wijn naar de zoekfunctie van de webshop. [assumptie] De link werkt zo voor een WooCommerce-webshop; bij een ander systeem pas je de link aan bij Instellingen.
+- **Bestelaanvraag per e-mail**: mandje, gegevens (particulier of bedrijf met btw-nummer), afhalen of levering, met controle op leverzone, levertermijn en minimum. Het resultaat is een e-mail naar het winkeladres.
+- **Uit**: enkel advies.
 
-Instellingen in de backoffice (Huisstijl > Bestellen): bestellen aan/uit, afhalen en levering met info, leverkost, gratis levering vanaf, minimumbestelling, dooskorting per 6 flessen en btw.
+In alle modi is er een **offerteaanvraag** per e-mail (handig voor B2B) en kan de klant zijn selectie delen. Notities uit Cadeau (kaartje, inpakwens) gaan mee.
 
-### Database voor bestellingen
+## Instellingen (backoffice)
 
-Bestellingen gaan naar een Google Sheet via een kleine Apps Script web-app (`bestellingen-apps-script.gs`, met de installatiestappen bovenaan). Het script mailt de winkel bij elke nieuwe bestelling en, als je dat wil, de klant een ontvangstbevestiging. In de backoffice (tab Bestellingen) volg je ze op en wijzig je de status: nieuw, bevestigd, klaar, afgehaald of geleverd, geannuleerd.
+- **Contact**: zwarte balk bovenaan (namen en telefoonnummers), e-mail, webshop-URL, adres.
+- **Bestellen**: modus, knoptekst, winkelwagenlink, winkelwagenpagina, zoeklink, pauze per product.
+- **Leveringsvoorwaarden**: afhalen (met info), levering, leverzone (postcodes, bv. `8000-8490, 8730`), leverdagen, levertermijn in werkdagen, leverkost, gratis levering vanaf, minimumbestelling, volledige voorwaarden als tekst (link in de footer en bij het bestellen).
+- **Voorraad**: voorraad tonen (alleen status, exact aantal of niets), wat met wijnen die niet op voorraad zijn (tonen en bestelbaar, niet bestelbaar of verbergen), tekst bij niet op voorraad, "bijna op"-drempel. Per wijn vul je "voorraad" (ja/nee) in of een exact aantal (`stock`).
+- **Prijzen**: tonen ja/nee, tekst bij geen prijs, btw, dooskorting per 6 flessen.
+- **Onderdelen**: elk tabblad van de klant-app apart aan of uit, demowijnen tonen.
+- **Toegang**: beheercode.
 
-Zonder webhook valt de app terug op een e-mail naar het winkeladres. Zonder e-mailadres krijgt de klant de bestelling om te kopiëren.
+## Presentatiepagina
+
+`over.html` is de link om door te sturen: een overzicht van alle mogelijkheden, met knoppen om elk onderdeel meteen te proberen en de testcode voor de backoffice.
 
 ## Food pairing
 

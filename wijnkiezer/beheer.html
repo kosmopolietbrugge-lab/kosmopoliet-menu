@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex">
   <meta name="theme-color" content="#ffffff">
   <link rel="icon" href="icon-192.png" type="image/png">
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="beheer.css">
 </head>
@@ -31,7 +31,7 @@
           <button data-v="wijnen" class="on">Wijnen</button>
           <button data-v="import">Import / export</button>
           <button data-v="stijl">Huisstijl</button>
-          <button data-v="bestellingen">Bestellingen <span id="o-new" class="cnt" hidden>0</span></button>
+          <button data-v="instellingen">Instellingen</button>
           <button data-v="publiceer">Publiceren <span id="dirty" class="cnt" hidden>!</span></button>
         </nav>
       </div>
@@ -94,19 +94,12 @@
         </div>
       </section>
 
-      <section id="v-bestellingen" class="view">
+      <section id="v-instellingen" class="view">
         <div class="step">
-          <h2>Bestellingen</h2>
-          <p class="sub">Bestellingen komen binnen in een Google Sheet (de bestellingen-database). Hoe je die eenmalig koppelt, staat bovenaan in <code>bestellingen-apps-script.gs</code>. De sleutel wordt alleen op dit toestel bewaard.</p>
-          <div class="form">
-            <label class="full">Web-app-URL<input id="o-url" class="search" placeholder="https://script.google.com/macros/s/…/exec"></label>
-            <label>Sleutel<input id="o-key" class="search" type="password" autocomplete="off"></label>
-            <label>Status<select id="o-filter" class="search"><option value="">Alle</option><option value="nieuw">Nieuw</option><option value="bevestigd">Bevestigd</option><option value="klaar">Klaar / onderweg</option><option value="afgehaald">Afgehaald / geleverd</option><option value="geannuleerd">Geannuleerd</option></select></label>
-          </div>
-          <div class="row" style="margin-top:12px"><button class="cta" id="o-load">Laden / vernieuwen</button><button class="cta alt" id="o-csv">Export CSV</button></div>
-          <p id="o-msg" class="sub" style="margin-top:10px"></p>
+          <h2>Instellingen</h2>
+          <p class="sub">Leveringsvoorwaarden, voorraad, prijzen, bestellen en welke onderdelen klanten zien. Wijzigingen worden live na <b>Publiceren</b>.</p>
+          <div class="form" id="in-form"></div>
         </div>
-        <div id="o-list"></div>
       </section>
 
       <section id="v-publiceer" class="view">

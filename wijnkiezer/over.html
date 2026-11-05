@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wijnkiezer · Wat kan het?</title>
+  <meta name="description" content="Overzicht van de Wijnkiezer: persoonlijk wijnadvies, food pairing, cadeaus, hoeveelheden en bestellen via de webshop.">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="icon" href="icon-192.png" type="image/png">
+  <link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .hero{padding:50px 0 30px;max-width:780px}
+    .hero h2{font-size:clamp(36px,6vw,62px);line-height:1.05;margin-bottom:16px}
+    .hero p{font-size:21px;color:var(--dim)}
+    .feat{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin:30px 0}
+    .feat article{background:var(--bg);padding:28px;display:flex;flex-direction:column;gap:10px}
+    .feat .nr{font-size:14px;letter-spacing:.16em;color:var(--accent);font-weight:700}
+    .feat h3{font-size:26px}
+    .feat p{margin:0;color:var(--dim)}
+    .feat ul{margin:0;padding-left:18px;color:var(--dim)}
+    .feat a.cta{align-self:flex-start;margin-top:auto}
+    .sec{padding:40px 0;border-top:1px solid var(--line)}
+    .sec h2{font-size:34px;margin-bottom:12px}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:30px}
+    .codebox{background:#000;color:#fff;padding:24px}
+    .codebox b{color:var(--accent);font-size:26px;letter-spacing:.12em}
+    @media (max-width:760px){.two{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="topbar"><div class="wrap"><div class="tl"><span><b>Christophe</b> +32 476 77 96 29</span><span><b>Charles</b> +32 472 28 89 00</span></div><a href="mailto:info@annicaert.be">info@annicaert.be</a></div></div>
+  <header class="top" id="top"><div class="wrap hdr">
+    <a class="brand" href="index.html"><img class="logo zw" src="logo.png" alt="Logo"><img class="logo wit" src="logo-wit.png" alt=""></a>
+    <nav class="tabs"><button onclick="location.href='index.html'">Naar de wijnkiezer</button></nav>
+  </div></header>
+
+  <main class="wrap">
+    <section class="hero">
+      <p class="up" style="color:var(--accent);font-size:14px">Voorstel · testversie</p>
+      <h2>De Wijnkiezer: persoonlijk advies, ook online</h2>
+      <p>Een keuzehulp bovenop de webshop. Klanten vinden in een paar klikken de juiste wijn: op smaak, budget, gerecht, gelegenheid of voor een cadeau. Bestellen gebeurt in jullie eigen webshop, en professioneel advies in de winkel blijft daar bovenop.</p>
+      <div class="row" style="margin-top:24px"><a class="cta" href="index.html">Probeer de Wijnkiezer</a><a class="cta alt" href="beheer.html">Open de backoffice</a></div>
+    </section>
+
+    <div class="feat">
+      <article><span class="nr">01</span><h3>Advies in 4 stappen</h3><p>Gelegenheid, smaakstijl, gerecht en budget. De klant krijgt een top 9 met match-percentage en de uitleg waarom.</p><a class="cta alt" href="index.html?tab=advies">Probeer</a></article>
+      <article><span class="nr">02</span><h3>Alle wijnen, slim gefilterd</h3><p>Filteren op budget (slider met minimum en maximum), kleur, smaakprofiel (body, zoet, frisheid, tannine, fruit) en wat erbij past.</p><a class="cta alt" href="index.html?tab=alle">Probeer</a></article>
+      <article><span class="nr">03</span><h3>Bij mijn gerecht</h3><p>Food pairing op basis van ongeveer 45 ingrediënten, ook heel specifiek en vegan-vriendelijk: asperges, artisjok, rode biet, pompoen, zeewier, tofu, seitan…, plus bereiding, saus en keuken.</p><a class="cta alt" href="index.html?tab=pairing">Probeer</a></article>
+      <article><span class="nr">04</span><h3>Cadeau</h3><p>Voor wie, gelegenheid (ook relatiegeschenken), budget, 1 tot 6 flessen en het aantal cadeaus. Drie pakketten, met kaartje en inpakwens.</p><a class="cta alt" href="index.html?tab=cadeau">Probeer</a></article>
+      <article><span class="nr">05</span><h3>Hoeveel flessen?</h3><p>Aantal gasten, duur, soort feest, seizoen en tempo, en je krijgt het aantal flessen per kleur met een voorstel en een totaalprijs. Ideaal voor feesten en bedrijfsevents.</p><a class="cta alt" href="index.html?tab=hoeveel">Probeer</a></article>
+      <article><span class="nr">06</span><h3>Jouw voorkeuren</h3><p>Eén keer instellen, overal toegepast:</p><ul><li>vegan, bio, biodynamisch, natuurwijn, zonder toegevoegde sulfieten</li><li>laag alcohol of alcoholvrij, budget</li><li>land van herkomst, regio, druif</li><li>flesformaat, op voorraad</li></ul></article>
+      <article><span class="nr">07</span><h3>Bestellen via de webshop</h3><p>De klant stelt een selectie samen en zet die in één klik in de winkelwagen van de webshop. Bestellen en betalen gebeurt daar, zoals nu. Een offerteaanvraag per e-mail kan ook.</p><a class="cta alt" href="index.html?tab=alle">Probeer</a></article>
+      <article><span class="nr">08</span><h3>Technische fiche</h3><p>Per wijn een fiche met smaakprofiel, aroma’s, food pairing, druiven, alcohol, serveertemperatuur, labels en voorraadstatus. Bewaren en delen kan ook.</p><a class="cta alt" href="index.html?tab=alle">Probeer</a></article>
+      <article><span class="nr">09</span><h3>Voor horeca</h3><p>Leest de menukaart van een restaurant: per gerecht de beste wijnen, de kleinste wijnkaart die het hele menu dekt, en een prijscalculator per fles en per glas.</p><a class="cta alt" href="horeca.html">Probeer</a></article>
+    </div>
+
+    <section class="sec two">
+      <div>
+        <h2>Backoffice</h2>
+        <p>Alles zelf beheren, zonder technische kennis:</p>
+        <ul>
+          <li><b>Wijnen</b>: toevoegen, bewerken, smaakprofiel, food pairing, voorraad, webshop-ID</li>
+          <li><b>Import</b> uit Excel/CSV, of rechtstreeks plakken; export als back-up</li>
+          <li><b>Instellingen</b>: leveringsvoorwaarden (afhalen, levering, zone, levertermijn, leverkost, gratis vanaf, minimum), voorraad (tonen, aantal, “bijna op”, niet op voorraad: tonen, niet bestelbaar of verbergen), prijzen, btw, dooskorting, bestelwijze en welke onderdelen klanten zien</li>
+          <li><b>Huisstijl</b>: logo, kleuren, lettertypes</li>
+          <li><b>Publiceren</b>: eerst een voorbeeldweergave, dan live</li>
+        </ul>
+      </div>
+      <div class="codebox">
+        <p class="up" style="color:#bbb">Toegang backoffice (test)</p>
+        <p style="margin:6px 0">Code: <b>1234</b></p>
+        <p style="color:#bbb;margin:0">Wijzig de code bij Instellingen › Toegang. In de testversie blijven wijzigingen in je eigen browser tot ze gepubliceerd worden; je kan dus niets stukmaken.</p>
+        <p style="margin-top:18px"><a class="cta gold" href="beheer.html">Open de backoffice</a></p>
+      </div>
+    </section>
+
+    <section class="sec">
+      <h2>Wat is er nog nodig om live te gaan?</h2>
+      <ol>
+        <li><b>De technische fiches</b> (Excel- of CSV-export van de webshop): dan worden alle wijnen in één keer ingeladen. Nu staan er een paar echte wijnen en demowijnen in (gemarkeerd als “Demo”).</li>
+        <li><b>Het product-ID per wijn</b> in de webshop, zodat “Toevoegen aan winkelwagen” rechtstreeks in de winkelwagen van de webshop terechtkomt.</li>
+        <li><b>Leveringsvoorwaarden en voorraadregels</b> invullen bij Instellingen.</li>
+        <li><b>Een plek op de website</b>: een knop “Wijnkiezer” in het menu of een eigen adres (bv. wijnkiezer.annicaert.be).</li>
+      </ol>
+    </section>
+  </main>
+  <footer><img src="logo-wit.png" alt="">Jan Breydellaan 40, 8200 Brugge · info@annicaert.be</footer>
+  <script>window.addEventListener('scroll', function () { document.getElementById('top').classList.toggle('dark', window.scrollY > 60); }, { passive: true });</script>
+</body>
+</html>

@@ -158,7 +158,7 @@
       '<label class="meta">Van<input class="search" id="c-van" value="' + esc(cd.van || '') + '"></label></div>' +
       '<label class="meta" style="display:block;margin-top:10px">Tekst op het kaartje<textarea class="search" id="c-msg" rows="3">' + esc(msg) + '</textarea></label>' +
       '<label class="tog"><input type="checkbox" id="c-inpak"' + (cd.inpak !== false ? ' checked' : '') + '> Graag mooi ingepakt</label>' +
-      '<div class="row" style="margin-top:12px">' + (st().bestellen !== false ? '<button class="cta" id="c-cart">In mandje</button>' : '') + '<button class="cta alt" id="c-send">Deel</button>' +
+      '<div class="row" style="margin-top:12px">' + (st().bestelModus !== 'uit' ? '<button class="cta" id="c-cart">Toevoegen aan winkelwagen</button>' : '') + '<button class="cta alt" id="c-send">Deel</button>' +
       '<button class="cta alt" id="c-fav">Zet in Bewaard</button></div>' +
       '<p class="sub" style="margin-top:8px">Het kaartje en de inpakwens gaan mee met je bestelling.</p></div>';
     ['c-voor', 'c-van', 'c-msg'].forEach(function (id) { $(id).oninput = function () { cd[{ 'c-voor': 'aan', 'c-van': 'van', 'c-msg': 'msg' }[id]] = this.value; }; });
@@ -293,7 +293,7 @@
       '<li>1 fles = 6 glazen wijn of 7 flûtes bubbels' + (hv.dessert ? ', dessertwijn ± 8 kleine glaasjes' : '') + '.</li>' +
       (hv.type === 'diner' ? '<li>Bij een diner rekenen we 1 glas bubbels als aperitief per gast.</li>' : '') +
       '<li>Voorzie daarnaast ± ' + water + ' l water' + (nietDr ? ' en alcoholvrije dranken voor ' + nietDr + ' gasten' : '') + '.</li></ul>' +
-      (rows ? '<div class="row" style="margin-top:12px">' + (st().bestellen !== false ? '<button class="cta" id="h-cart">Alles in mandje</button>' : '') + '<button class="cta alt" id="h-send">Deel lijstje</button><button class="cta alt" id="h-fav">Zet in Bewaard</button><button class="cta alt" onclick="print()">Afdrukken</button></div>' +
+      (rows ? '<div class="row" style="margin-top:12px">' + (st().bestelModus !== 'uit' ? '<button class="cta" id="h-cart">Alles in winkelwagen</button>' : '') + '<button class="cta alt" id="h-send">Deel lijstje</button><button class="cta alt" id="h-fav">Zet in Bewaard</button><button class="cta alt" onclick="print()">Afdrukken</button></div>' +
         '<p class="sub" style="margin-top:8px">Twijfel je? In de winkel helpen we je graag verder met het juiste aantal en de keuze.</p>' : '');
   }
   function gekozen() {

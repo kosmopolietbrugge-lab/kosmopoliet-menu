@@ -97,7 +97,8 @@
       druiven: arr(w.druiven), prijs: nullNum(w.prijs), inhoud: num(w.inhoud, 75), alcohol: nullNum(w.alcohol),
       vegan: w.vegan === true || w.vegan === false ? w.vegan : null, bio: !!w.bio,
       biodynamisch: !!w.biodynamisch, natuurwijn: !!w.natuurwijn, sulfietarm: !!w.sulfietarm,
-      voorraad: w.voorraad !== false,
+      stock: nullNum(w.stock), voorraad: (w.stock !== null && w.stock !== undefined && w.stock !== '') ? +w.stock > 0 : w.voorraad !== false,
+      webshopId: w.webshopId ? String(w.webshopId).trim() : '',
       smaak: { body: num(s.body, 3), zoet: num(s.zoet, 1), zuur: num(s.zuur, 3), tannine: num(s.tannine, 1), fruit: num(s.fruit, 3), hout: num(s.hout, 1) },
       aromas: arr(w.aromas), pairing: arr(w.pairing),
       serveertemp: w.serveertemp || '', omschrijving: w.omschrijving || '', url: w.url || '', foto: w.foto || '',
@@ -143,6 +144,7 @@
     return wines.filter(function (w) {
       if (!w.actief) return false;
       if (st && st.toonDemo === false && w.bron === 'demo') return false;
+      if (st && st.nietOpVoorraad === 'verbergen' && !w.voorraad) return false;
       if (f.kleuren && f.kleuren.length && f.kleuren.indexOf(w.kleur) < 0) return false;
       if (f.landen && f.landen.length && f.landen.indexOf(w.land) < 0) return false;
       if (f.regios && f.regios.length && f.regios.indexOf(w.regio) < 0) return false;
@@ -427,12 +429,21 @@
     return { set: function (n) { a.value = n[0]; b.value = n[1]; upd(false); }, get: function () { return v.slice(); } };
   }
 
+  var GLAS = { rood: ['#2b0a10', '#4a1420'], wit: ['#c9c48a', '#e7e2b0'], rose: ['#e7a3a6', '#f4c7c3'], bubbels: ['#2f4a22', '#5a7a3c'], zoet: ['#b8862e', '#e0b25a'], versterkt: ['#1e0a0a', '#3c1414'] };
+  function fles(kleur, bubbels) {
+    var g = GLAS[kleur] || GLAS.rood, cap = kleur === 'bubbels' ? '#b08d57' : '#1b1b1b';
+    return '<svg viewBox="0 0 60 220" aria-hidden="true"><defs><linearGradient id="g' + kleur + '" x1="0" x2="1"><stop offset="0" stop-color="' + g[0] + '"/><stop offset=".45" stop-color="' + g[1] + '"/><stop offset="1" stop-color="' + g[0] + '"/></linearGradient></defs>' +
+      '<path d="M24 4h12v' + (kleur === 'bubbels' ? 50 : 56) + 'c0 14 16 22 16 42v112c0 3-2 5-5 5H13c-3 0-5-2-5-5V102c0-20 16-28 16-42z" fill="url(#g' + kleur + ')"/>' +
+      '<rect x="23" y="2" width="14" height="' + (kleur === 'bubbels' ? 40 : 22) + '" rx="2" fill="' + cap + '"/>' +
+      '<rect x="10" y="130" width="40" height="50" fill="#f6f2ea"/><rect x="16" y="143" width="28" height="3" fill="#111"/><rect x="19" y="151" width="22" height="2" fill="#999"/><rect x="21" y="157" width="18" height="2" fill="#999"/></svg>';
+  }
+
   window.Wijnkiezer = {
     KLEUREN: KLEUREN, INGREDIENTEN: INGREDIENTEN, GROEPEN: GROEPEN, GROEP_VAN: GROEP_VAN, BEREIDING: BEREIDING, SMAKEN: SMAKEN, KEUKENS: KEUKENS,
     SMAAKASSEN: SMAAKASSEN, FORMATEN: FORMATEN, LEVENSSTIJL: LEVENSSTIJL, formaat: formaat, pairLevel: pairLevel,
     label: label, load: load, normalize: normalize, normWine: normWine, arr: arr, slug: slug,
     getDraft: getDraft, saveDraft: saveDraft, clearDraft: clearDraft, DRAFT_KEY: DRAFT_KEY,
     applyTheme: applyTheme, filter: filter, tasteScore: tasteScore, pair: pair, rankForDish: rankForDish,
-    profileDish: profileDish, esc: esc, euro: euro, veganLabel: veganLabel, bars: bars, dualRange: dualRange
+    profileDish: profileDish, fles: fles, esc: esc, euro: euro, veganLabel: veganLabel, bars: bars, dualRange: dualRange
   };
 })();

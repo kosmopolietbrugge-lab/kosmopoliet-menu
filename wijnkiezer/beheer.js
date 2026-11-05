@@ -10,7 +10,7 @@
   var DB = null, LIVE = '';
   var GH_KEY = 'wijnkiezer-gh';
 
-  var COLS = ['id', 'naam', 'producent', 'jaar', 'kleur', 'land', 'regio', 'druiven', 'prijs', 'inkoop', 'inhoud', 'alcohol', 'vegan', 'bio', 'biodynamisch', 'natuurwijn', 'sulfietarm', 'voorraad',
+  var COLS = ['id', 'naam', 'producent', 'jaar', 'kleur', 'land', 'regio', 'druiven', 'prijs', 'inkoop', 'inhoud', 'alcohol', 'vegan', 'bio', 'biodynamisch', 'natuurwijn', 'sulfietarm', 'voorraad', 'stock', 'webshopId',
     'body', 'zoet', 'zuur', 'tannine', 'fruit', 'hout', 'aromas', 'pairing', 'serveertemp', 'omschrijving', 'url', 'foto', 'actief', 'uitgelicht', 'bron'];
 
   function toast(t) { var el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(function () { el.classList.remove('on'); }, 2200); }
@@ -41,7 +41,7 @@
     $('gate').hidden = true; $('app').hidden = false;
     W.applyTheme(DB.instellingen); $('b-naam').textContent = DB.instellingen.naam || 'Wijnkiezer';
     $('qk').innerHTML += W.KLEUREN.map(function (k) { return '<option value="' + k[0] + '">' + k[1] + '</option>'; }).join('');
-    renderTable(); renderStyle(); initPublish(); initOrders(); markDirty();
+    renderTable(); renderStyle(); initPublish(); markDirty();
     $('cols').innerHTML = COLS.map(function (c) { return '<code>' + c + '</code>'; }).join(' ') +
       '<br><br><b>kleur</b>: ' + W.KLEUREN.map(function (k) { return k[0]; }).join(', ') +
       '<br><b>body, zoet, zuur, tannine, fruit, hout</b>: 1 (weinig) tot 5 (veel)' +
@@ -89,7 +89,8 @@
       inp('prijs', 'Verkoopprijs € (webshop)', 'number') + inp('inkoop', 'Horecaprijs € excl. btw (optioneel)', 'number') + inp('inhoud', 'Inhoud (cl)', 'number') + inp('alcohol', 'Alcohol %', 'number') +
       sel('vegan', 'Vegan', [['null', 'Onbekend'], ['true', 'Ja'], ['false', 'Nee']]) + sel('bio', 'Bio', [['false', 'Nee'], ['true', 'Ja']]) + sel('biodynamisch', 'Biodynamisch', [['false', 'Nee'], ['true', 'Ja']]) +
       sel('natuurwijn', 'Natuurwijn', [['false', 'Nee'], ['true', 'Ja']]) + sel('sulfietarm', 'Zonder toegevoegde sulfieten', [['false', 'Nee'], ['true', 'Ja']]) +
-      sel('voorraad', 'Voorraad', [['true', 'Op voorraad'], ['false', 'Niet op voorraad']]) +
+      sel('voorraad', 'Voorraad', [['true', 'Op voorraad'], ['false', 'Niet op voorraad']]) + inp('stock', 'Aantal op voorraad (optioneel, overschrijft “Voorraad”)', 'number') +
+      inp('webshopId', 'Webshop-product-ID (voor de winkelwagen)') +
       inp('serveertemp', 'Serveertemperatuur') + sel('actief', 'Zichtbaar', [['true', 'Ja'], ['false', 'Nee (verborgen)']]) + sel('uitgelicht', 'Uitgelicht', [['false', 'Nee'], ['true', 'Ja ★']]) +
       sel('bron', 'Bron', [['fiche', 'Technische fiche'], ['kosmopoliet-kaart', 'Kosmopoliet-kaart'], ['demo', 'Demo']]) +
       '<label class="full">Omschrijving / proefnotitie<textarea class="search" rows="3" data-f="omschrijving">' + esc(cur.omschrijving) + '</textarea></label>' +
@@ -158,6 +159,7 @@
     o.vegan = o.vegan === undefined || o.vegan === '' ? null : yes(o.vegan) ? true : no(o.vegan) ? false : null;
     ['bio', 'biodynamisch', 'natuurwijn', 'sulfietarm'].forEach(function (k) { if (o[k] !== undefined) o[k] = yes(o[k]); });
     if (o.voorraad !== undefined && o.voorraad !== '') o.voorraad = !no(o.voorraad);
+    if (o.stock !== undefined) o.stock = o.stock === '' ? null : String(o.stock).replace(',', '.');
     if (o.actief !== undefined && o.actief !== '') o.actief = !no(o.actief);
     if (o.uitgelicht !== undefined) o.uitgelicht = yes(o.uitgelicht);
     o.smaak = {}; W.SMAAKASSEN.forEach(function (a) { if (r[a[0]] !== undefined && r[a[0]] !== '') o.smaak[a[0]] = r[a[0]]; });
@@ -219,35 +221,61 @@
 
   /* ---------- huisstijl ---------- */
   var STF = [
-    ['naam', 'Naam zaak', 'text'], ['baseline', 'Baseline', 'text'], ['webshop', 'Webshop-URL', 'url'], ['contact', 'Contactregel (footer)', 'text'],
+    ['naam', 'Naam zaak', 'text'], ['baseline', 'Baseline', 'text'],
     ['logo', 'Logo (bestandsnaam of URL, zwart op transparant)', 'text'],
-    ['k.primair', 'Hoofdkleur', 'color'], ['k.accent', 'Accentkleur', 'color'], ['k.achtergrond', 'Achtergrond', 'color'], ['k.oppervlak', 'Kaarten', 'color'], ['k.tekst', 'Tekst', 'color'],
-    ['fontTitel', 'Lettertype titels (CSS)', 'text'], ['fontTekst', 'Lettertype tekst (CSS)', 'text'],
-    ['toonDemo', 'Demowijnen tonen aan klanten', 'bool'], ['beheerPin', 'Beheercode', 'text'],
-    ['-', 'Bestellen'],
-    ['bestellen', 'Bestellen via de app', 'bool'], ['email', 'E-mail winkel (meldingen en reserve als de webhook faalt)', 'email'],
-    ['bestelWebhook', 'Bestel-webhook (URL van de Google Apps Script web-app)', 'url'],
-    ['afhalen', 'Afhalen in de winkel mogelijk', 'bool'], ['afhaalInfo', 'Info bij afhalen (openingsuren…)', 'text'],
-    ['levering', 'Levering mogelijk', 'bool'], ['leverInfo', 'Info bij levering (zone, dagen…)', 'text'],
-    ['leverkost', 'Leverkost (€)', 'number'], ['gratisLeveringVanaf', 'Gratis levering vanaf (€)', 'number'],
-    ['minBestelling', 'Minimumbestelling (€)', 'number'], ['doosKorting', 'Dooskorting per 6 flessen (%)', 'number'], ['btw', 'Btw (%)', 'number']
+    ['k.primair', 'Hoofdkleur', 'color'], ['k.accent', 'Accentkleur (prijzen)', 'color'], ['k.achtergrond', 'Achtergrond', 'color'], ['k.oppervlak', 'Kaarten', 'color'], ['k.tekst', 'Tekst', 'color'],
+    ['fontTitel', 'Lettertype titels (CSS)', 'text'], ['fontTekst', 'Lettertype tekst (CSS)', 'text']
   ];
-  function gv(p) { var s = DB.instellingen; if (p.indexOf('k.') === 0) return (s.kleuren || {})[p.slice(2)]; return s[p]; }
-  function sv(p, v) { var s = DB.instellingen; if (p.indexOf('k.') === 0) { s.kleuren = s.kleuren || {}; s.kleuren[p.slice(2)] = v; } else s[p] = v; }
+  var INST = [
+    ['-', 'Contact'],
+    ['topbar', 'Zwarte balk bovenaan (scheid met |, bv. “Christophe +32 476 77 96 29 | Charles +32 472 28 89 00”)', 'text', 'full'],
+    ['email', 'E-mailadres winkel', 'email'], ['webshop', 'Webshop-URL', 'url'], ['contact', 'Adresregel (footer)', 'text'],
+    ['-', 'Bestellen'],
+    ['bestelModus', 'Hoe bestellen klanten?', 'select', '', [['webshop', 'Via de eigen webshop (winkelwagen)'], ['aanvraag', 'Bestelaanvraag per e-mail'], ['uit', 'Niet: enkel advies']]],
+    ['knopTekst', 'Tekst op de bestelknop', 'text'],
+    ['winkelwagenLink', 'Link “product in winkelwagen” ({webshop}, {id}, {n})', 'text', 'full'],
+    ['winkelwagenPagina', 'Link naar de winkelwagen', 'text'], ['zoekLink', 'Zoeklink webshop ({webshop}, {q})', 'text'], ['overzetPauze', 'Pauze per product bij overzetten (ms)', 'number'],
+    ['-', 'Leveringsvoorwaarden'],
+    ['afhalen', 'Afhalen in de winkel', 'bool'], ['afhaalInfo', 'Info afhalen (adres, openingsuren)', 'text'],
+    ['levering', 'Levering aan huis', 'bool'], ['leverZone', 'Leverzone (postcodes, bv. 8000-8490, 8730)', 'text'],
+    ['leverdagen', 'Leverdagen (bv. di en vr)', 'text'], ['levertermijn', 'Levertermijn (werkdagen)', 'number'],
+    ['leverkost', 'Leverkost (€)', 'number'], ['gratisLeveringVanaf', 'Gratis levering vanaf (€)', 'number'], ['minBestelling', 'Minimumbestelling (€)', 'number'],
+    ['leverVoorwaarden', 'Volledige leveringsvoorwaarden (tekst)', 'textarea', 'full'],
+    ['-', 'Voorraad'],
+    ['stockTonen', 'Voorraad tonen aan klanten', 'select', '', [['status', 'Alleen “niet op voorraad” en “bijna op”'], ['aantal', 'Exact aantal tonen'], ['nee', 'Niets tonen']]],
+    ['nietOpVoorraad', 'Wijnen die niet op voorraad zijn', 'select', '', [['tonen', 'Tonen en bestelbaar (wordt besteld)'], ['niet-bestelbaar', 'Tonen, niet bestelbaar'], ['verbergen', 'Verbergen']]],
+    ['nietOpVoorraadTekst', 'Tekst bij niet op voorraad (bv. “Levertijd ± 1 week”)', 'text'], ['laagStock', '“Bijna op” vanaf (aantal flessen)', 'number'],
+    ['-', 'Prijzen'],
+    ['prijzenTonen', 'Prijzen tonen', 'bool'], ['prijsOpAanvraag', 'Tekst als er geen prijs is', 'text'],
+    ['btw', 'Btw (%)', 'number'], ['doosKorting', 'Dooskorting per 6 flessen (%)', 'number'],
+    ['-', 'Onderdelen voor klanten'],
+    ['o.advies', 'Advies in 4 stappen', 'bool'], ['o.alle', 'Alle wijnen', 'bool'], ['o.pairing', 'Bij mijn gerecht', 'bool'], ['o.cadeau', 'Cadeau', 'bool'], ['o.hoeveel', 'Hoeveel flessen?', 'bool'], ['o.bewaard', 'Bewaard', 'bool'],
+    ['toonDemo', 'Demowijnen tonen', 'bool'],
+    ['-', 'Toegang'],
+    ['beheerPin', 'Beheercode backoffice', 'text']
+  ];
+  function gv(p) { var s = DB.instellingen; if (p.indexOf('k.') === 0) return (s.kleuren || {})[p.slice(2)]; if (p.indexOf('o.') === 0) return (s.onderdelen || {})[p.slice(2)]; return s[p]; }
+  function sv(p, v) { var s = DB.instellingen; if (p.indexOf('k.') === 0) { s.kleuren = s.kleuren || {}; s.kleuren[p.slice(2)] = v; } else if (p.indexOf('o.') === 0) { s.onderdelen = s.onderdelen || {}; s.onderdelen[p.slice(2)] = v; } else s[p] = v; }
+  function fieldHTML(f) {
+    if (f[0] === '-') return '<h3 class="ed-sec full">' + f[1] + '</h3>';
+    var v = gv(f[0]), cls = f[3] === 'full' ? ' class="full"' : '';
+    if (f[2] === 'bool') return '<label' + cls + '>' + f[1] + '<select class="search" data-st="' + f[0] + '"><option value="true"' + (v !== false ? ' selected' : '') + '>Ja</option><option value="false"' + (v === false ? ' selected' : '') + '>Nee</option></select></label>';
+    if (f[2] === 'select') return '<label' + cls + '>' + f[1] + '<select class="search" data-st="' + f[0] + '">' + f[4].map(function (o, i) { return '<option value="' + o[0] + '"' + ((v || f[4][0][0]) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>';
+    if (f[2] === 'textarea') return '<label' + cls + '>' + f[1] + '<textarea class="search" rows="5" data-st="' + f[0] + '">' + esc(v || '') + '</textarea></label>';
+    return '<label' + cls + '>' + f[1] + '<input class="search" type="' + f[2] + '" data-st="' + f[0] + '" value="' + esc(v == null ? '' : v) + '"></label>';
+  }
   function renderStyle() {
-    $('st-form').innerHTML = STF.map(function (f) {
-      if (f[0] === '-') return '<h3 class="ed-sec full">' + f[1] + '</h3>';
-      var v = gv(f[0]);
-      if (f[2] === 'bool') return '<label>' + f[1] + '<select class="search" data-st="' + f[0] + '"><option value="true"' + (v !== false ? ' selected' : '') + '>Ja</option><option value="false"' + (v === false ? ' selected' : '') + '>Nee</option></select></label>';
-      return '<label>' + f[1] + '<input class="search" type="' + f[2] + '" data-st="' + f[0] + '" value="' + esc(v || '') + '"></label>';
-    }).join('');
+    $('st-form').innerHTML = STF.map(fieldHTML).join('');
+    $('in-form').innerHTML = INST.map(fieldHTML).join('');
     preview();
   }
-  $('st-form').addEventListener('change', function (e) {
+  function onSet(e) {
     var p = e.target.dataset.st; if (!p) return;
     var v = e.target.value; if (v === 'true') v = true; else if (v === 'false') v = false; else if (e.target.type === 'number') v = v === '' ? '' : +v;
-    sv(p, v); W.applyTheme(DB.instellingen); preview(); commit('Huisstijl bijgewerkt');
-  });
+    sv(p, v); W.applyTheme(DB.instellingen); preview(); commit('Opgeslagen (nog niet gepubliceerd)');
+  }
+  $('st-form').addEventListener('change', onSet);
+  $('in-form').addEventListener('change', onSet);
   $('st-form').addEventListener('input', function (e) { if (e.target.type === 'color') { sv(e.target.dataset.st, e.target.value); W.applyTheme(DB.instellingen); } });
   function preview() { $('pv-naam').textContent = DB.instellingen.naam || ''; $('pv-base').textContent = DB.instellingen.baseline || ''; }
 
@@ -285,58 +313,6 @@
       .catch(function (e) { $('pub-msg').textContent = 'Publiceren mislukt: ' + e.message + '. Controleer token en rechten, of gebruik “Download wijnen.json”.'; })
       .then(function () { $('gh-go').disabled = false; });
   };
-
-  /* ---------- bestellingen ---------- */
-  var ORD_KEY = 'wijnkiezer-beheer-bestellingen', ORDERS = [];
-  var STATUS = [['nieuw', 'Nieuw'], ['bevestigd', 'Bevestigd'], ['klaar', 'Klaar / onderweg'], ['afgehaald', 'Afgehaald / geleverd'], ['geannuleerd', 'Geannuleerd']];
-  function initOrders() {
-    var c = {}; try { c = JSON.parse(localStorage.getItem(ORD_KEY) || '{}'); } catch (e) {}
-    $('o-url').value = c.url || DB.instellingen.bestelWebhook || ''; $('o-key').value = c.key || '';
-    $('o-load').onclick = loadOrders; $('o-filter').onchange = renderOrders; $('o-csv').onclick = ordersCSV;
-    if (c.url && c.key) loadOrders();
-  }
-  function loadOrders() {
-    var url = $('o-url').value.trim(), key = $('o-key').value.trim();
-    if (!url || !key) { $('o-msg').textContent = 'Vul de web-app-URL en de sleutel in.'; return; }
-    try { localStorage.setItem(ORD_KEY, JSON.stringify({ url: url, key: key })); } catch (e) {}
-    $('o-msg').textContent = 'Laden…';
-    fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 'sleutel=' + encodeURIComponent(key)).then(function (r) { return r.json(); }).then(function (j) {
-      if (!j.ok) throw new Error(j.fout === 'sleutel' ? 'verkeerde sleutel' : j.fout);
-      ORDERS = j.bestellingen || []; $('o-msg').textContent = ORDERS.length + ' bestellingen geladen · ' + new Date().toLocaleTimeString('nl-BE').slice(0, 5);
-      renderOrders();
-    }).catch(function (e) { $('o-msg').textContent = 'Laden mislukt: ' + e.message; });
-  }
-  function eur2(n) { return '€ ' + Number(n || 0).toFixed(2).replace('.', ','); }
-  function renderOrders() {
-    var f = $('o-filter').value, l = ORDERS.filter(function (o) { return !f || o.status === f; });
-    var nieuw = ORDERS.filter(function (o) { return o.status === 'nieuw'; }).length;
-    $('o-new').hidden = !nieuw; $('o-new').textContent = nieuw;
-    $('o-list').innerHTML = l.length ? l.map(function (o) {
-      var k = o.klant || {}, lv = o.levering || {};
-      return '<details class="ord"><summary><b>' + esc(o.nr) + '</b><span>' + esc(String(o.tijd || '').slice(0, 16).replace('T', ' ')) + '</span><span>' + esc(k.bedrijf || k.naam || '') + (o.type === 'bedrijf' ? ' <span class="tag">B2B</span>' : '') + '</span>' +
-        '<span>' + (lv.wijze === 'levering' ? 'Levering' : 'Afhalen') + ' ' + esc(lv.datum || '') + '</span><span class="price">' + eur2(o.totaal) + '</span>' +
-        '<span class="tag' + (o.status === 'nieuw' ? ' v' : '') + '">' + esc(W.label(STATUS, o.status || 'nieuw')) + '</span></summary>' +
-        '<div class="ord-b"><label class="tog">Status <select class="search o-st" style="max-width:220px" data-nr="' + esc(o.nr) + '">' + STATUS.map(function (s) { return '<option value="' + s[0] + '"' + (o.status === s[0] ? ' selected' : '') + '>' + s[1] + '</option>'; }).join('') + '</select></label><p>' + esc(k.naam) + ' · <a href="tel:' + esc(k.tel) + '">' + esc(k.tel) + '</a> · <a href="mailto:' + esc(k.email) + '?subject=' + encodeURIComponent('Je bestelling ' + o.nr) + '">' + esc(k.email) + '</a>' +
-        (k.btw ? '<br>Btw: ' + esc(k.btw) + (k.referentie ? ' · ref. ' + esc(k.referentie) : '') + (k.factuuradres ? '<br>Facturatie: ' + esc(k.factuuradres) : '') : '') +
-        (lv.wijze === 'levering' ? '<br>Adres: ' + esc([lv.adres, lv.postcode, lv.gemeente].join(' ')) : '') + '</p>' +
-        '<table class="tbl">' + (o.lijnen || []).map(function (x) { return '<tr><td>' + x.n + ' ×</td><td>' + esc(x.naam) + '</td><td>' + (x.prijs != null ? eur2(x.prijs * x.n) : 'op aanvraag') + '</td></tr>'; }).join('') + '</table>' +
-        ((o.notities || []).length ? '<p><b>Notities:</b><br>' + o.notities.map(esc).join('<br>') + '</p>' : '') + (o.opmerking ? '<p><b>Opmerking:</b> ' + esc(o.opmerking) + '</p>' : '') + '</div></details>';
-    }).join('') : '<div class="empty">Geen bestellingen' + (f ? ' met deze status' : '') + '.</div>';
-  }
-  $('o-list') && $('o-list').addEventListener('change', function (e) {
-    if (!e.target.classList.contains('o-st')) return;
-    var nr = e.target.dataset.nr, st = e.target.value, url = $('o-url').value.trim(), key = $('o-key').value.trim();
-    fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ actie: 'status', sleutel: key, nr: nr, status: st }) })
-      .then(function (r) { return r.json(); }).then(function (j) { if (!j.ok) throw new Error(j.fout); var o = ORDERS.find(function (x) { return x.nr === nr; }); if (o) o.status = st; var open = Array.from(document.querySelectorAll('.ord[open] .o-st')).map(function (x) { return x.dataset.nr; }); renderOrders(); open.forEach(function (n) { var d = document.querySelector('.o-st[data-nr="' + CSS.escape(n) + '"]'); if (d) d.closest('details').open = true; }); toast('Status bijgewerkt'); })
-      .catch(function (er) { toast('Status niet bewaard: ' + er.message); });
-  });
-  function ordersCSV() {
-    var rows = ['nr;datum;status;type;naam;bedrijf;btw;email;tel;wijze;datum levering;flessen;totaal'].concat(ORDERS.map(function (o) {
-      var k = o.klant || {}, lv = o.levering || {};
-      return [o.nr, String(o.tijd || '').slice(0, 10), o.status, o.type, k.naam, k.bedrijf, k.btw, k.email, k.tel, lv.wijze, lv.datum, (o.lijnen || []).reduce(function (a, l) { return a + l.n; }, 0), String(o.totaal).replace('.', ',')].map(csvCell).join(';');
-    }));
-    download('bestellingen.csv', '﻿' + rows.join('\n'), 'text/csv');
-  }
 
   start();
 })();
