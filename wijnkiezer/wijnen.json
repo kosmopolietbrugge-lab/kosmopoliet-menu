@@ -8,17 +8,28 @@
   "contact": "Jan Breydellaan 40, 8200 Brugge · 050 31 73 91",
   "email": "",
   "kleuren": {
-   "primair": "#5c1a2b",
-   "accent": "#b08d57",
-   "achtergrond": "#f7f2ea",
+   "primair": "#111111",
+   "accent": "#8a7d6b",
+   "achtergrond": "#ffffff",
    "oppervlak": "#ffffff",
-   "tekst": "#2a2224"
+   "tekst": "#111111"
   },
-  "fontTitel": "Georgia, 'Times New Roman', serif",
-  "fontTekst": "'Segoe UI', system-ui, -apple-system, sans-serif",
-  "logo": "",
+  "fontTitel": "'Archivo', 'Helvetica Neue', Arial, sans-serif",
+  "fontTekst": "'Archivo', 'Helvetica Neue', Arial, sans-serif",
+  "logo": "logo.png",
   "toonDemo": true,
-  "beheerPin": "1234"
+  "beheerPin": "1234",
+  "bestellen": true,
+  "bestelWebhook": "",
+  "afhalen": true,
+  "afhaalInfo": "Afhalen in de winkel, Jan Breydellaan 40, Brugge.",
+  "levering": true,
+  "leverInfo": "Levering in Brugge en omgeving.",
+  "leverkost": 0,
+  "gratisLeveringVanaf": 0,
+  "minBestelling": 0,
+  "doosKorting": 0,
+  "btw": 21
  },
  "wijnen": [
   {
@@ -51,11 +62,16 @@
     "amandel"
    ],
    "pairing": [
-    "groenten",
-    "vis",
+    "aperitief",
+    "olijven-noten",
+    "courgette",
+    "venkel",
+    "erwten-boontjes",
     "pasta-risotto",
-    "plantaardig-eiwit",
-    "aperitief"
+    "tofu",
+    "vegan-kaas",
+    "vis",
+    "groenten"
    ],
    "serveertemp": "8–10 °C",
    "omschrijving": "Elegant, fris, fruitig en romig.",
@@ -63,7 +79,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "kosmopoliet-kaart"
+   "bron": "kosmopoliet-kaart",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "santatresa-rinalanca",
@@ -96,10 +116,14 @@
     "bloesem"
    ],
    "pairing": [
-    "groenten",
+    "pompoen",
+    "wortelgroenten",
+    "mais",
+    "kikkererwten",
+    "tempeh",
+    "noten-zaden",
     "schaaldieren",
     "gevogelte",
-    "plantaardig-eiwit",
     "kaas-zacht"
    ],
    "serveertemp": "9–11 °C",
@@ -108,7 +132,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "kosmopoliet-kaart"
+   "bron": "kosmopoliet-kaart",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "miopasso-primitivo",
@@ -140,12 +168,17 @@
     "specerijen"
    ],
    "pairing": [
-    "paddenstoelen",
-    "peulvruchten",
+    "tomaat",
+    "aubergine",
+    "paprika",
+    "bospaddenstoelen",
+    "linzen",
+    "bonen",
+    "seitan",
+    "pizza-brood",
     "pasta-risotto",
-    "plantaardig-eiwit",
-    "rund",
-    "kaas-hard"
+    "kaas-hard",
+    "rund"
    ],
    "serveertemp": "15–17 °C",
    "omschrijving": "Rijk, fruitig, kruidig, zacht en toegankelijk.",
@@ -153,7 +186,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "kosmopoliet-kaart"
+   "bron": "kosmopoliet-kaart",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "gordo-monastrell",
@@ -185,11 +222,14 @@
     "tijm"
    ],
    "pairing": [
-    "paddenstoelen",
-    "peulvruchten",
-    "plantaardig-eiwit",
-    "rund",
+    "bospaddenstoelen",
+    "aubergine",
+    "linzen",
+    "bonen",
+    "seitan",
+    "tempeh",
     "lam",
+    "rund",
     "wild",
     "kaas-hard"
    ],
@@ -199,7 +239,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "kosmopoliet-kaart"
+   "bron": "kosmopoliet-kaart",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "lamartine-rose",
@@ -229,9 +273,15 @@
     "bloemen"
    ],
    "pairing": [
-    "groenten",
-    "vis",
     "aperitief",
+    "paprika",
+    "tomaat",
+    "courgette",
+    "biet",
+    "avocado",
+    "granen-bulgur",
+    "kikkererwten",
+    "vis",
     "schaaldieren"
    ],
    "serveertemp": "8–10 °C",
@@ -240,7 +290,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "kosmopoliet-kaart"
+   "bron": "kosmopoliet-kaart",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "lajara-prosecco",
@@ -273,7 +327,11 @@
    ],
    "pairing": [
     "aperitief",
-    "groenten",
+    "olijven-noten",
+    "gefrituurde-hapjes",
+    "zeewier",
+    "avocado",
+    "erwten-boontjes",
     "vis",
     "schaaldieren"
    ],
@@ -283,7 +341,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "kosmopoliet-kaart"
+   "bron": "kosmopoliet-kaart",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "demo-chablis",
@@ -312,13 +374,17 @@
    "aromas": [
     "citroen",
     "oesterschelp",
-    "krijt"
+    "krijt",
+    "mineraal"
    ],
    "pairing": [
+    "asperge",
+    "artisjok",
+    "zeewier",
+    "venkel",
+    "geitenkaas",
     "vis",
-    "schaaldieren",
-    "groenten",
-    "kaas-zacht"
+    "schaaldieren"
    ],
    "serveertemp": "",
    "omschrijving": "",
@@ -326,7 +392,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "demo"
+   "bron": "demo",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "demo-meursault",
@@ -358,9 +428,13 @@
     "vanille"
    ],
    "pairing": [
+    "pompoen",
+    "mais",
+    "champignon",
+    "truffel",
+    "noten-zaden",
     "gevogelte",
     "vis",
-    "paddenstoelen",
     "pasta-risotto"
    ],
    "serveertemp": "",
@@ -369,7 +443,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "demo"
+   "bron": "demo",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "demo-riesling",
@@ -401,10 +479,13 @@
     "petroleum"
    ],
    "pairing": [
-    "groenten",
-    "schaaldieren",
+    "asperge",
+    "kool",
+    "wortelgroenten",
+    "tofu",
+    "zeewier",
     "varken",
-    "plantaardig-eiwit"
+    "schaaldieren"
    ],
    "serveertemp": "",
    "omschrijving": "",
@@ -412,7 +493,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "demo"
+   "bron": "demo",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "demo-sauvignon",
@@ -444,9 +529,13 @@
     "kruisbes"
    ],
    "pairing": [
-    "groenten",
-    "kaas-zacht",
-    "vis",
+    "asperge",
+    "artisjok",
+    "erwten-boontjes",
+    "venkel",
+    "bladgroen",
+    "avocado",
+    "geitenkaas",
     "aperitief"
    ],
    "serveertemp": "",
@@ -455,7 +544,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "demo"
+   "bron": "demo",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "demo-gewurz",
@@ -487,8 +580,11 @@
     "gember"
    ],
    "pairing": [
-    "groenten",
-    "plantaardig-eiwit",
+    "pompoen",
+    "wortelgroenten",
+    "kool",
+    "tofu",
+    "tempeh",
     "kaas-zacht"
    ],
    "serveertemp": "",
@@ -497,7 +593,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "demo"
+   "bron": "demo",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "demo-provence",
@@ -530,10 +630,14 @@
     "kruiden"
    ],
    "pairing": [
-    "groenten",
-    "vis",
+    "paprika",
+    "tomaat",
+    "courgette",
+    "aubergine",
+    "kikkererwten",
+    "granen-bulgur",
     "aperitief",
-    "gevogelte"
+    "vis"
    ],
    "serveertemp": "",
    "omschrijving": "",
@@ -541,7 +645,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "demo"
+   "bron": "demo",
+   "biodynamisch": true,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "demo-pinot",
@@ -573,11 +681,14 @@
     "bosgrond"
    ],
    "pairing": [
-    "paddenstoelen",
+    "biet",
+    "bospaddenstoelen",
+    "champignon",
+    "truffel",
+    "linzen",
+    "tempeh",
     "gevogelte",
-    "vis",
-    "varken",
-    "pasta-risotto"
+    "vis"
    ],
    "serveertemp": "",
    "omschrijving": "",
@@ -585,7 +696,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "demo"
+   "bron": "demo",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": false
   },
   {
    "id": "demo-beaujolais",
@@ -602,7 +717,7 @@
    "inhoud": 75,
    "alcohol": 12.5,
    "vegan": true,
-   "bio": false,
+   "bio": true,
    "smaak": {
     "body": 2,
     "zoet": 1,
@@ -617,7 +732,11 @@
     "viooltje"
    ],
    "pairing": [
-    "groenten",
+    "biet",
+    "prei-ui",
+    "witloof",
+    "pizza-brood",
+    "champignon",
     "varken",
     "gevogelte",
     "kaas-zacht",
@@ -629,7 +748,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "demo"
+   "bron": "demo",
+   "biodynamisch": false,
+   "natuurwijn": true,
+   "sulfietarm": true,
+   "voorraad": true
   },
   {
    "id": "demo-rioja",
@@ -661,9 +784,13 @@
     "gedroogde kers"
    ],
    "pairing": [
+    "bospaddenstoelen",
+    "truffel",
+    "aubergine",
+    "bonen",
+    "seitan",
     "lam",
     "rund",
-    "paddenstoelen",
     "kaas-hard"
    ],
    "serveertemp": "",
@@ -672,7 +799,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "demo"
+   "bron": "demo",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "demo-bordeaux",
@@ -705,6 +836,9 @@
     "tabak"
    ],
    "pairing": [
+    "bospaddenstoelen",
+    "linzen",
+    "seitan",
     "rund",
     "lam",
     "wild",
@@ -716,7 +850,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "demo"
+   "bron": "demo",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "demo-malbec",
@@ -748,10 +886,13 @@
     "cacao"
    ],
    "pairing": [
+    "aubergine",
+    "paprika",
+    "bonen",
+    "seitan",
+    "tempeh",
     "rund",
-    "lam",
-    "peulvruchten",
-    "plantaardig-eiwit"
+    "lam"
    ],
    "serveertemp": "",
    "omschrijving": "",
@@ -759,7 +900,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "demo"
+   "bron": "demo",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "demo-cava",
@@ -794,9 +939,12 @@
    ],
    "pairing": [
     "aperitief",
-    "vis",
-    "schaaldieren",
-    "groenten"
+    "olijven-noten",
+    "gefrituurde-hapjes",
+    "zeewier",
+    "avocado",
+    "tofu",
+    "vis"
    ],
    "serveertemp": "",
    "omschrijving": "",
@@ -804,7 +952,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "demo"
+   "bron": "demo",
+   "biodynamisch": true,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "demo-champagne",
@@ -839,6 +991,9 @@
    ],
    "pairing": [
     "aperitief",
+    "gefrituurde-hapjes",
+    "zeewier",
+    "champignon",
     "schaaldieren",
     "vis",
     "gevogelte"
@@ -849,7 +1004,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "demo"
+   "bron": "demo",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "demo-sauternes",
@@ -883,7 +1042,8 @@
    ],
    "pairing": [
     "kaas-blauw",
-    "fruitdessert"
+    "fruitdessert",
+    "karamel-noten"
    ],
    "serveertemp": "",
    "omschrijving": "",
@@ -891,7 +1051,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "demo"
+   "bron": "demo",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "demo-moscato",
@@ -932,7 +1096,11 @@
    "foto": "",
    "actief": true,
    "uitgelicht": false,
-   "bron": "demo"
+   "bron": "demo",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
   },
   {
    "id": "demo-ruby",
@@ -966,7 +1134,155 @@
    ],
    "pairing": [
     "chocolade",
-    "kaas-blauw"
+    "kaas-blauw",
+    "karamel-noten"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo",
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true
+  },
+  {
+   "id": "demo-alcoholvrij",
+   "naam": "Demo · Alcoholvrije bubbels",
+   "producent": "",
+   "jaar": null,
+   "kleur": "bubbels",
+   "land": "Duitsland",
+   "regio": "Rheinhessen",
+   "druiven": [
+    "Riesling"
+   ],
+   "prijs": 9.5,
+   "inhoud": 75,
+   "alcohol": 0.0,
+   "vegan": true,
+   "bio": false,
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true,
+   "smaak": {
+    "body": 1,
+    "zoet": 2,
+    "zuur": 4,
+    "tannine": 1,
+    "fruit": 4,
+    "hout": 1
+   },
+   "aromas": [
+    "appel",
+    "citrus"
+   ],
+   "pairing": [
+    "aperitief",
+    "fruitdessert",
+    "gefrituurde-hapjes"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo"
+  },
+  {
+   "id": "demo-gruner-halve",
+   "naam": "Demo · Grüner Veltliner (halve fles)",
+   "producent": "",
+   "jaar": null,
+   "kleur": "wit",
+   "land": "Oostenrijk",
+   "regio": "Kamptal",
+   "druiven": [
+    "Grüner Veltliner"
+   ],
+   "prijs": 9,
+   "inhoud": 37.5,
+   "alcohol": 12,
+   "vegan": true,
+   "bio": false,
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true,
+   "smaak": {
+    "body": 2,
+    "zoet": 1,
+    "zuur": 4,
+    "tannine": 1,
+    "fruit": 3,
+    "hout": 1
+   },
+   "aromas": [
+    "witte peper",
+    "groene appel",
+    "gras"
+   ],
+   "pairing": [
+    "asperge",
+    "erwten-boontjes",
+    "bladgroen",
+    "kool",
+    "tofu"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo"
+  },
+  {
+   "id": "demo-cotesdurhone-magnum",
+   "naam": "Demo · Côtes du Rhône (magnum)",
+   "producent": "",
+   "jaar": null,
+   "kleur": "rood",
+   "land": "Frankrijk",
+   "regio": "Rhône",
+   "druiven": [
+    "Grenache",
+    "Syrah"
+   ],
+   "prijs": 32,
+   "inhoud": 150,
+   "alcohol": 14,
+   "vegan": true,
+   "bio": true,
+   "biodynamisch": false,
+   "natuurwijn": false,
+   "sulfietarm": false,
+   "voorraad": true,
+   "smaak": {
+    "body": 4,
+    "zoet": 1,
+    "zuur": 3,
+    "tannine": 3,
+    "fruit": 4,
+    "hout": 2
+   },
+   "aromas": [
+    "kers",
+    "garrigue",
+    "zwarte peper"
+   ],
+   "pairing": [
+    "aubergine",
+    "linzen",
+    "bonen",
+    "seitan",
+    "lam",
+    "kaas-hard"
    ],
    "serveertemp": "",
    "omschrijving": "",

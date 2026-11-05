@@ -8,8 +8,8 @@ Het is een statische PWA: geen server nodig, installeerbaar op gsm/tablet ("Zet 
 
 | Pagina | Voor wie | Wat |
 |---|---|---|
-| `index.html` | klanten | Advies in 4 stappen, alle wijnen met filters, "Bij mijn gerecht" (food pairing), cadeaumodus, hoeveelheidscalculator, bewaarde wijnen delen of afdrukken |
-| `beheer.html` | zaakvoerder | Backoffice: wijnen toevoegen en bewerken, CSV/Excel-import, huisstijl, publiceren |
+| `index.html` | klanten | Advies in 4 stappen, alle wijnen met filters, "Bij mijn gerecht" (food pairing), cadeaumodus, hoeveelheidscalculator, bewaarde wijnen, voorkeuren (preselectie), mandje en bestellen |
+| `beheer.html` | zaakvoerder | Backoffice: wijnen toevoegen en bewerken, CSV/Excel-import, huisstijl en bestelinstellingen, bestellingen opvolgen, publiceren |
 | `horeca.html` | keuken & zaal | Pairing per gerecht van de menukaart, compacte wijnkaart die heel het menu dekt, prijscalculator |
 
 Na publicatie op GitHub Pages:
@@ -30,12 +30,23 @@ De beheercode is alleen een drempel: de echte beveiliging is het GitHub-token. Z
 
 ### Velden per wijn
 
-`id, naam, producent, jaar, kleur, land, regio, druiven, prijs, inkoop, inhoud, alcohol, vegan, bio, smaak{body, zoet, zuur, tannine, fruit, hout}, aromas, pairing, serveertemp, omschrijving, url, foto, actief, uitgelicht, bron`
+`id, naam, producent, jaar, kleur, land, regio, druiven, prijs, inkoop, inhoud, alcohol, vegan, bio, biodynamisch, natuurwijn, sulfietarm, voorraad, smaak{body, zoet, zuur, tannine, fruit, hout}, aromas, pairing, serveertemp, omschrijving, url, foto, actief, uitgelicht, bron`
 
 - `kleur`: rood, wit, rose, bubbels, zoet, versterkt
 - smaakassen: 1 (weinig) tot 5 (veel)
 - `vegan`: true / false / null (onbekend)
-- `pairing`: aperitief, groenten, paddenstoelen, peulvruchten, plantaardig-eiwit, pasta-risotto, vis, schaaldieren, gevogelte, varken, rund, lam, wild, kaas-zacht, kaas-hard, kaas-blauw, fruitdessert, chocolade
+- `pairing`: groepen en specifieke ingrediënten (volledige lijst: `GROEPEN` in `engine.js`). Een groepstag (bv. `groenten`) geldt algemeen, een specifieke tag weegt zwaarder:
+  - aperitief: olijven-noten, gefrituurde-hapjes
+  - groenten: asperge, artisjok, tomaat, paprika, aubergine, courgette, pompoen, wortelgroenten, biet, prei-ui, kool, bladgroen, venkel, erwten-boontjes, avocado, mais, witloof
+  - paddenstoelen: champignon, bospaddenstoelen, truffel
+  - peulvruchten: linzen, kikkererwten, bonen
+  - plantaardig-eiwit: tofu, tempeh, seitan, noten-zaden, vegan-kaas
+  - zee: zeewier, vis, schaaldieren
+  - granen: pasta-risotto, pizza-brood, granen-bulgur
+  - vlees: gevogelte, varken, rund, lam, wild
+  - kaas: kaas-zacht, geitenkaas, kaas-hard, kaas-blauw
+  - dessert: fruitdessert, chocolade, karamel-noten
+- `voorraad`: true / false (niet op voorraad = toch bestelbaar, met vermelding)
 - `bron`: fiche, kosmopoliet-kaart, demo
 - `inkoop`: horecaprijs excl. btw (wordt alleen gebruikt in de prijscalculator van horeca.html, niet getoond aan klanten)
 
@@ -58,9 +69,25 @@ Tabblad **Hoeveel flessen?** (`index.html?tab=hoeveel`). Invoer: aantal gasten, 
 
 Per kleur stelt de calculator een wijn voor die de klant kan wijzigen, met subtotaal en totaal. Het aantal flessen is per kleur bij te stellen met − en +.
 
-## Bestellingen doorsturen
+## Voorkeuren (preselectie)
 
-Vul in de backoffice onder Huisstijl het veld "E-mail voor cadeau- en eventbestellingen" in. De knop opent dan een e-mail met het lijstje naar de winkel. Zonder e-mailadres deelt of kopieert de knop het lijstje.
+Knop **Voorkeuren** rechtsboven. Wat je hier kiest, geldt voor alle onderdelen: vegan, bio, biodynamisch, natuurwijn, zonder toegevoegde sulfieten, alcohol (laag of alcoholvrij), budget per fles (slider met minimum en maximum), land van herkomst, regio, druif, flesformaat (halve fles, fles, magnum) en enkel op voorraad. De actieve keuzes staan als balk onder de menubalk en zijn één voor één weg te klikken.
+
+## Bestellen
+
+1. **Mandje**: met + op een wijn, vanuit de fiche (met aantal), vanuit cadeau en hoeveelheden (het kaartje en de inpakwens gaan mee als notitie) of vanuit Bewaard.
+2. **Gegevens**: particulier of bedrijf/horeca (bedrijfsnaam, btw-nummer, referentie, facturatieadres, prijzen ook excl. btw), afhalen of levering, gewenste datum, opmerking, akkoord en 18+.
+3. **Bevestiging** met bestelnummer. Klanten zien hun vorige bestellingen en kunnen die opnieuw bestellen.
+
+Er is geen online betaling: betalen bij afhaling of levering.
+
+Instellingen in de backoffice (Huisstijl > Bestellen): bestellen aan/uit, afhalen en levering met info, leverkost, gratis levering vanaf, minimumbestelling, dooskorting per 6 flessen en btw.
+
+### Database voor bestellingen
+
+Bestellingen gaan naar een Google Sheet via een kleine Apps Script web-app (`bestellingen-apps-script.gs`, met de installatiestappen bovenaan). Het script mailt de winkel bij elke nieuwe bestelling en, als je dat wil, de klant een ontvangstbevestiging. In de backoffice (tab Bestellingen) volg je ze op en wijzig je de status: nieuw, bevestigd, klaar, afgehaald of geleverd, geannuleerd.
+
+Zonder webhook valt de app terug op een e-mail naar het winkeladres. Zonder e-mailadres krijgt de klant de bestelling om te kopiëren.
 
 ## Food pairing
 

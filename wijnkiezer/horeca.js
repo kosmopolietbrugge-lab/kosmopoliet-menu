@@ -52,12 +52,13 @@
     var list = DISHES.filter(function (d) { return !c || d.gang === c; });
     $('dishes').innerHTML = list.length ? list.map(function (d) {
       var p = profile(d), top = W.rankForDish(P, p, 3);
-      var summary = p.ing.map(function (x) { return W.label(W.INGREDIENTEN, x); }).concat(p.bereiding.map(function (x) { return W.label(W.BEREIDING, x); }), p.smaken.map(function (x) { return W.label(W.SMAKEN, x); }));
+      var summary = p.ing.map(function (x) { return W.label(W.INGREDIENTEN, x); }).concat(p.bereiding.map(function (x) { return W.label(W.BEREIDING, x); }), p.smaken.map(function (x) { return W.label(W.SMAKEN, x); }), (p.keuken || []).map(function (x) { return W.label(W.KEUKENS, x); }));
       return '<div class="dish" data-id="' + esc(d.id) + '"><h3>' + esc(d.naam) + '</h3>' +
         (d.omschrijving ? '<div class="meta">' + esc(d.omschrijving) + '</div>' : '') +
         '<div class="prof">' + summary.map(function (s) { return '<span class="tag">' + esc(s) + '</span>'; }).join('') + '<span class="tag">intensiteit ' + p.intensiteit + '/5</span>' + (prof[d.id] ? '<span class="tag d">aangepast</span>' : '') +
         ' <button class="chip" data-toggle>Profiel bijstellen</button></div>' +
-        '<div class="edit-prof"><p class="sub">Ingrediënt</p><div class="chips">' + chip(W.INGREDIENTEN, p.ing, 'ing') + '</div>' +
+        '<div class="edit-prof"><p class="sub">Ingrediënten</p>' + W.GROEPEN.map(function (g) { return '<div class="pg"><b>' + esc(g[1]) + '</b><div class="chips">' + chip([[g[0], 'Algemeen']].concat(g[2]), p.ing, 'ing') + '</div></div>'; }).join('') +
+        '<p class="sub">Keuken</p><div class="chips">' + chip(W.KEUKENS.map(function (k) { return [k[0], k[1]]; }), p.keuken || [], 'keuken') + '</div>' +
         '<p class="sub">Bereiding</p><div class="chips">' + chip(W.BEREIDING, p.bereiding, 'bereiding') + '</div>' +
         '<p class="sub">Smaken</p><div class="chips">' + chip(W.SMAKEN, p.smaken, 'smaken') + '</div>' +
         '<p class="sub">Intensiteit</p><div class="chips">' + chip([[1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5']].map(function (x) { return [String(x[0]), x[1]]; }), [String(p.intensiteit)], 'intensiteit') + '</div></div>' +
@@ -73,7 +74,7 @@
     var b = e.target.closest('[data-g]'); if (!b) return;
     var d = DISHES.find(function (x) { return x.id === box.dataset.id; });
     var p = JSON.parse(JSON.stringify(profile(d))), g = b.dataset.g, k = b.dataset.k;
-    if (g === 'intensiteit') p.intensiteit = +k; else { var i = p[g].indexOf(k); if (i >= 0) p[g].splice(i, 1); else p[g].push(k); }
+    if (g === 'intensiteit') p.intensiteit = +k; else { p[g] = p[g] || []; var i = p[g].indexOf(k); if (i >= 0) p[g].splice(i, 1); else p[g].push(k); }
     prof[d.id] = p; saveProf(); renderDishes();
     var nb = document.querySelector('.dish[data-id="' + CSS.escape(d.id) + '"]'); if (nb) nb.classList.add('open');
   };

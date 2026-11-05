@@ -39,7 +39,7 @@
     ['verjaardag', 'Verjaardag'], ['bedankje', 'Bedankje'], ['eindejaar', 'Kerst & nieuwjaar'], ['housewarming', 'Housewarming'],
     ['huwelijk', 'Huwelijk / jubileum'], ['zakelijk', 'Relatiegeschenk (zakelijk)']
   ];
-  var BUDGET = [[15, '€ 15'], [25, '€ 25'], [40, '€ 40'], [60, '€ 60'], [100, '€ 100'], [0, 'Geen limiet']];
+  var CMAX = 200;
   var AANTAL = [[1, '1 fles'], [2, '2 flessen'], [3, '3 flessen'], [6, 'Kistje van 6']];
   var KAART = {
     verjaardag: 'Gelukkige verjaardag! Op een jaar vol mooie momenten. Proost!',
@@ -49,7 +49,7 @@
     huwelijk: 'Proficiat! Op de liefde en op nog vele mooie jaren samen.',
     zakelijk: 'Bedankt voor de fijne samenwerking. Op een succesvol nieuw jaar!'
   };
-  var cd = { voor: 'onbekend', gel: 'verjaardag', kleuren: [], budget: 25, aantal: 1, mix: true, stuks: 1, vegan: false, gekozen: null };
+  var cd = { voor: 'onbekend', gel: 'verjaardag', kleuren: [], budget: [15, 40], aantal: 1, mix: true, stuks: 1, vegan: false, gekozen: null };
 
   function giftScore(w, perFles) {
     var s = 50, R = [], sm = w.smaak;
@@ -80,10 +80,13 @@
   }
 
   function pakketten() {
-    var perFles = cd.budget ? cd.budget / cd.aantal : 0;
-    var pool = W.filter(wines(), { kleuren: cd.kleuren, vegan: cd.vegan }, st())
-      .filter(function (w) { return !perFles || w.prijs == null || w.prijs <= perFles * 1.05; });
-    var rank = pool.map(function (w) { var g = giftScore(w, perFles); return { w: w, score: g.score, redenen: g.redenen }; })
+    var bmax = cd.budget[1] >= CMAX ? 0 : cd.budget[1], perFles = bmax ? bmax / cd.aantal : 0, minFles = cd.budget[0] / cd.aantal * 0.8;
+    var fx = { kleuren: cd.kleuren, prijsMin: null, prijsMax: null }; if (cd.vegan) fx.vegan = true;
+    var pr = WK.pre();
+    var pool = WK.f(fx)
+      .filter(function (w) { return (pr.formaten.length || W.formaat(w) !== 'halve') && (pr.alcohol === 'vrij' || !(w.alcohol != null && w.alcohol <= 0.5)); })
+      .filter(function (w) { return w.prijs == null || ((!perFles || w.prijs <= perFles * 1.05) && w.prijs >= minFles); });
+    var rank = pool.map(function (w) { var g = giftScore(w, perFles || (cd.budget[0] ? cd.budget[0] / cd.aantal * 1.3 : 0)); return { w: w, score: g.score, redenen: g.redenen }; })
       .sort(function (a, b) { return b.score - a.score; });
     var out = [], usedFirst = [];
     for (var p = 0; p < 3 && rank.length; p++) {
@@ -117,11 +120,13 @@
       '<div class="step"><h2>Wat drinkt de ontvanger graag?</h2><p class="sub">Niets aanduiden = weet ik niet.</p><div class="chips">' + chips(W.KLEUREN, cd.kleuren, true, 'kleuren') + '</div>' +
       '<label class="tog" style="margin-top:10px"><input type="checkbox" id="c-vegan"' + (cd.vegan ? ' checked' : '') + '> Ontvanger eet/drinkt vegan</label></div>' +
       '<div class="step"><h2>Budget en grootte</h2>' +
-      '<p class="sub">Budget per cadeau</p><div class="chips">' + chips(BUDGET, cd.budget, false, 'budget') + '</div>' +
+      '<p class="sub">Budget per cadeau (min – max)</p><div id="c-bud"></div>' +
       '<p class="sub" style="margin-top:12px">Aantal flessen per cadeau</p><div class="chips">' + chips(AANTAL, cd.aantal, false, 'aantal') + '</div>' +
       (cd.aantal > 1 ? '<p class="sub" style="margin-top:12px">Samenstelling</p><div class="chips">' + chips([['1', 'Verschillende wijnen'], ['0', 'Allemaal dezelfde']], cd.mix ? '1' : '0', false, 'mix') + '</div>' : '') +
       '<label class="tog" style="margin-top:14px">Aantal cadeaus <input type="number" id="c-stuks" min="1" value="' + cd.stuks + '" class="search" style="width:90px;margin-left:8px"> <small class="meta">bv. voor klanten of personeel</small></label></div>' +
       '<div id="c-res"></div><div id="c-kaart"></div>';
+    W.dualRange($('c-bud'), { min: 0, max: CMAX, step: 5, value: cd.budget, fmt: function (v, k) { return k === 'max' && v >= CMAX ? '€ ' + CMAX + '+' : '€ ' + v; },
+      onChange: function (v) { cd.budget = v; cd.gekozen = null; clearTimeout(renderCadeau._t); renderCadeau._t = setTimeout(renderCadeauRes, 120); } });
     renderCadeauRes();
   }
   function renderCadeauRes() {
@@ -130,7 +135,7 @@
     if (!P.length) { $('c-res').innerHTML = html + '<div class="empty">Geen wijnen binnen deze keuzes. Verhoog het budget of laat de kleur open.</div>'; $('c-kaart').innerHTML = ''; return; }
     html += '<div class="grid">' + P.map(function (p, i) {
       var tot = p.totaal ? eur(p.totaal) + (p.onbekend ? ' + prijs op aanvraag' : '') : 'prijs op aanvraag';
-      var over = cd.budget && p.totaal > cd.budget;
+      var over = cd.budget[1] < CMAX && p.totaal > cd.budget[1];
       return '<div class="step gift' + (cd.gekozen === i ? ' on' : '') + '" style="margin:0">' +
         '<div class="row" style="justify-content:space-between"><b class="gift-t">' + ['Onze topkeuze', 'Alternatief', 'Iets anders'][i] + '</b><span class="tag">' + p.score + '% match</span></div>' +
         '<ul class="gift-l">' + p.regels.map(function (r) { return '<li><a href="#" data-fiche="' + esc(r.w.id) + '">' + r.n + ' × ' + esc(r.w.naam) + '</a> <span class="meta">' + (r.w.prijs != null ? eur(r.w.prijs) : 'op aanvraag') + '</span></li>'; }).join('') + '</ul>' +
@@ -147,18 +152,24 @@
   function renderKaartje(P) {
     if (cd.gekozen == null || !P[cd.gekozen]) { $('c-kaart').innerHTML = ''; return; }
     var msg = cd.msg != null ? cd.msg : KAART[cd.gel] || '';
-    $('c-kaart').innerHTML = '<div class="step" style="margin-top:14px"><h2>Kaartje en bestelling</h2>' +
+    $('c-kaart').innerHTML = '<div class="step" style="margin-top:14px"><h2>Kaartje</h2>' +
       '<div class="form" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">' +
       '<label class="meta">Voor<input class="search" id="c-voor" value="' + esc(cd.aan || '') + '"></label>' +
       '<label class="meta">Van<input class="search" id="c-van" value="' + esc(cd.van || '') + '"></label></div>' +
       '<label class="meta" style="display:block;margin-top:10px">Tekst op het kaartje<textarea class="search" id="c-msg" rows="3">' + esc(msg) + '</textarea></label>' +
       '<label class="tog"><input type="checkbox" id="c-inpak"' + (cd.inpak !== false ? ' checked' : '') + '> Graag mooi ingepakt</label>' +
-      '<div class="row" style="margin-top:12px"><button class="cta" id="c-send">' + (st().email ? 'Stuur naar de winkel' : 'Deel / kopieer bestelling') + '</button>' +
+      '<div class="row" style="margin-top:12px">' + (st().bestellen !== false ? '<button class="cta" id="c-cart">In mandje</button>' : '') + '<button class="cta alt" id="c-send">Deel</button>' +
       '<button class="cta alt" id="c-fav">Zet in Bewaard</button></div>' +
-      '<p class="sub" style="margin-top:8px">Je bestelling wordt klaargezet; betalen en afhalen doe je in de winkel.</p></div>';
+      '<p class="sub" style="margin-top:8px">Het kaartje en de inpakwens gaan mee met je bestelling.</p></div>';
     ['c-voor', 'c-van', 'c-msg'].forEach(function (id) { $(id).oninput = function () { cd[{ 'c-voor': 'aan', 'c-van': 'van', 'c-msg': 'msg' }[id]] = this.value; }; });
     $('c-inpak').onchange = function () { cd.inpak = this.checked; };
     $('c-fav').onclick = function () { P[cd.gekozen].regels.forEach(function (r) { if (!WK.isFav(r.w.id)) WK.toggleFav(r.w.id); }); WK.toast('Toegevoegd aan Bewaard'); };
+    if ($('c-cart')) $('c-cart').onclick = function () {
+      var p = P[cd.gekozen], N = Math.max(1, cd.stuks | 0);
+      var note = 'Cadeau (' + W.label(GELEG, cd.gel) + (N > 1 ? ', ' + N + ' stuks' : '') + (cd.aan ? ', voor ' + cd.aan : '') + ')' + (cd.inpak !== false ? ' · inpakken' : '') +
+        ' · kaartje' + (cd.van ? ' van ' + cd.van : '') + ': "' + ($('c-msg').value || '') + '"';
+      WKOrder.addMany(p.regels.map(function (r) { return { id: r.w.id, n: r.n * N }; }), note);
+    };
     $('c-send').onclick = function () {
       var p = P[cd.gekozen], N = Math.max(1, cd.stuks | 0);
       var t = 'Cadeaubestelling via de Wijnkiezer\n\n' +
@@ -210,7 +221,7 @@
     feest: { zomer: { bubbels: .15, wit: .3, rose: .3, rood: .25 }, winter: { bubbels: .2, wit: .3, rose: .1, rood: .4 } }
   };
   var GLAZEN_PER_FLES = { bubbels: 7, wit: 6, rose: 6, rood: 6, zoet: 8 };
-  var hv = { gasten: 40, uren: 4, type: 'receptie', seizoen: (new Date().getMonth() >= 3 && new Date().getMonth() <= 8) ? 'zomer' : 'winter', tempo: '1', niet: 10, marge: true, dozen: false, dessert: false, maxPrijs: 0, vegan: false, keuze: {}, extra: {} };
+  var hv = { gasten: 40, uren: 4, type: 'receptie', seizoen: (new Date().getMonth() >= 3 && new Date().getMonth() <= 8) ? 'zomer' : 'winter', tempo: '1', niet: 10, marge: true, dozen: false, dessert: false, keuze: {}, extra: {} };
 
   function bereken() {
     var drinkers = Math.max(0, Math.round(hv.gasten * (1 - hv.niet / 100)));
@@ -230,8 +241,7 @@
     return { drinkers: drinkers, perPers: perPers, glazenTot: Object.keys(res).reduce(function (a, k) { return a + res[k]; }, 0), flessen: fl };
   }
   function kandidaten(kleur) {
-    return W.filter(wines(), { kleuren: [kleur], vegan: hv.vegan }, st())
-      .filter(function (w) { return !hv.maxPrijs || w.prijs == null || w.prijs <= hv.maxPrijs; })
+    return WK.f({ kleuren: [kleur] })
       .map(function (w) { var sm = w.smaak, s = (w.uitgelicht ? 20 : 0) + (sm.tannine <= 3 ? 8 : 0) + (sm.zoet <= 2 || kleur === 'zoet' ? 6 : 0) + (w.prijs != null ? 10 - Math.min(10, w.prijs / 4) : 0) + (w.bron === 'demo' ? 0 : 3); return { w: w, s: s }; })
       .sort(function (a, b) { return b.s - a.s; }).map(function (x) { return x.w; });
   }
@@ -243,8 +253,8 @@
       '<label>Aantal volwassen gasten<input type="number" class="search" id="h-gasten" min="1" value="' + hv.gasten + '"></label>' +
       '<label>Duur (uren)<input type="number" class="search" id="h-uren" min="0.5" step="0.5" value="' + hv.uren + '"></label>' +
       '<label>Niet-drinkers (%)<input type="number" class="search" id="h-niet" min="0" max="100" step="5" value="' + hv.niet + '"></label>' +
-      '<label>Max. prijs per fles (€)<input type="number" class="search" id="h-max" min="0" placeholder="geen" value="' + (hv.maxPrijs || '') + '"></label>' +
       '</div>' +
+      '<p class="sub" style="margin-top:14px">Budget per fles</p><div id="h-bud"></div>' +
       '<p class="sub" style="margin-top:14px">Soort event</p><div class="choices">' + choices(TYPES, hv.type, 'type') + '</div>' +
       '<p class="sub" style="margin-top:14px">Seizoen</p><div class="chips">' + chips([['zomer', 'Lente / zomer'], ['winter', 'Herfst / winter']], hv.seizoen, false, 'seizoen') + '</div>' +
       '<p class="sub" style="margin-top:14px">Tempo van de gasten</p><div class="chips">' + chips(TEMPO, hv.tempo, false, 'tempo') + '</div>' +
@@ -252,8 +262,9 @@
       '<label class="tog"><input type="checkbox" id="h-marge"' + (hv.marge ? ' checked' : '') + '> 10 % reserve</label>' +
       '<label class="tog"><input type="checkbox" id="h-dozen"' + (hv.dozen ? ' checked' : '') + '> Afronden per doos van 6</label>' +
       (hv.type === 'diner' ? '<label class="tog"><input type="checkbox" id="h-dessert"' + (hv.dessert ? ' checked' : '') + '> Dessertwijn bij het dessert</label>' : '') +
-      '<label class="tog"><input type="checkbox" id="h-vegan"' + (hv.vegan ? ' checked' : '') + '> Enkel vegan wijnen</label></div></div>' +
+      '<p class="sub" style="margin-top:6px">Vegan, bio, land…? <button class="lnk" data-open-pre>Stel je voorkeuren in</button></p></div></div>' +
       '<div id="h-res"></div>';
+    WK.budgetSlider($('h-bud'));
     renderHoeveelRes();
   }
   function renderHoeveelRes() {
@@ -282,7 +293,7 @@
       '<li>1 fles = 6 glazen wijn of 7 flûtes bubbels' + (hv.dessert ? ', dessertwijn ± 8 kleine glaasjes' : '') + '.</li>' +
       (hv.type === 'diner' ? '<li>Bij een diner rekenen we 1 glas bubbels als aperitief per gast.</li>' : '') +
       '<li>Voorzie daarnaast ± ' + water + ' l water' + (nietDr ? ' en alcoholvrije dranken voor ' + nietDr + ' gasten' : '') + '.</li></ul>' +
-      (rows ? '<div class="row" style="margin-top:12px"><button class="cta" id="h-send">' + (st().email ? 'Stuur naar de winkel' : 'Deel / kopieer lijstje') + '</button><button class="cta alt" id="h-fav">Zet in Bewaard</button><button class="cta alt" onclick="print()">Afdrukken</button></div>' +
+      (rows ? '<div class="row" style="margin-top:12px">' + (st().bestellen !== false ? '<button class="cta" id="h-cart">Alles in mandje</button>' : '') + '<button class="cta alt" id="h-send">Deel lijstje</button><button class="cta alt" id="h-fav">Zet in Bewaard</button><button class="cta alt" onclick="print()">Afdrukken</button></div>' +
         '<p class="sub" style="margin-top:8px">Twijfel je? In de winkel helpen we je graag verder met het juiste aantal en de keuze.</p>' : '');
   }
   function gekozen() {
@@ -296,6 +307,7 @@
       var a = e.target.closest('[data-adj]');
       if (a) { var k = a.dataset.adj, cur = bereken().flessen[k] || 0, d = +a.dataset.d * (hv.dozen ? 6 : 1); if (cur + d >= 0) hv.extra[k] = (hv.extra[k] || 0) + d; renderHoeveelRes(); return; }
       if (e.target.id === 'h-fav') { gekozen().forEach(function (g) { if (!WK.isFav(g.w.id)) WK.toggleFav(g.w.id); }); WK.toast('Toegevoegd aan Bewaard'); return; }
+      if (e.target.id === 'h-cart') { WKOrder.addMany(gekozen().map(function (g) { return { id: g.w.id, n: g.n }; }), W.label(TYPES, hv.type) + ' · ' + hv.gasten + ' gasten · ' + hv.uren + ' uur'); return; }
       if (e.target.id === 'h-send') {
         var l = gekozen(), tot = 0, onb = false;
         var t = 'Bestellijst via de Wijnkiezer\n\n' + W.label(TYPES, hv.type) + ' · ' + hv.gasten + ' gasten · ' + hv.uren + ' uur\n\n' +
@@ -307,22 +319,22 @@
       hv[b.dataset.g] = b.dataset.k; hv.extra = {}; renderHoeveel();
     });
     v.addEventListener('input', function (e) {
-      var id = e.target.id, map = { 'h-gasten': 'gasten', 'h-uren': 'uren', 'h-niet': 'niet', 'h-max': 'maxPrijs' };
-      if (map[id]) { hv[map[id]] = Math.max(0, parseFloat(e.target.value) || 0); if (id !== 'h-max') hv.extra = {}; renderHoeveelRes(); }
+      var id = e.target.id, map = { 'h-gasten': 'gasten', 'h-uren': 'uren', 'h-niet': 'niet' };
+      if (map[id]) { hv[map[id]] = Math.max(0, parseFloat(e.target.value) || 0); hv.extra = {}; renderHoeveelRes(); }
     });
     v.addEventListener('change', function (e) {
       var id = e.target.id;
       if (e.target.classList.contains('hv-sel')) { hv.keuze[e.target.dataset.kleur] = e.target.value; renderHoeveelRes(); return; }
-      var map = { 'h-marge': 'marge', 'h-dozen': 'dozen', 'h-dessert': 'dessert', 'h-vegan': 'vegan' };
-      if (map[id]) { hv[map[id]] = e.target.checked; if (id !== 'h-vegan') hv.extra = {}; renderHoeveelRes(); }
+      var map = { 'h-marge': 'marge', 'h-dozen': 'dozen', 'h-dessert': 'dessert' };
+      if (map[id]) { hv[map[id]] = e.target.checked; hv.extra = {}; renderHoeveelRes(); }
     });
   }
 
   var bound = false;
   window.WKTools = {
     init: function () { if (bound) return; bound = true; bindCadeau(); bindHoeveel(); },
-    cadeau: function () { if (!$('v-cadeau').innerHTML) renderCadeau(); },
-    hoeveel: function () { if (!$('v-hoeveel').innerHTML) renderHoeveel(); },
+    cadeau: function () { if (!$('v-cadeau').innerHTML) renderCadeau(); else renderCadeauRes(); },
+    hoeveel: function () { if (!$('v-hoeveel').innerHTML) renderHoeveel(); else renderHoeveelRes(); },
     _bereken: bereken, _hv: hv
   };
 })();

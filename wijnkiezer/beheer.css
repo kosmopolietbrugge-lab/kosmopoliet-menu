@@ -1,5 +1,4 @@
 .gate{min-height:100vh;padding:16px}
-.cta.sm{padding:7px 14px;font-size:14px;text-decoration:none;background:#fff;color:var(--primair);border:0}
 .tbl-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
 .tbl{width:100%;border-collapse:collapse;font-size:14px}
 .tbl th,.tbl td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
@@ -26,3 +25,13 @@
 .pv-top small{font-family:var(--fb);font-size:13px;color:var(--accent)}
 .pv-body{background:var(--bg);padding:14px}
 code{background:var(--soft);padding:1px 5px;border-radius:4px}
+
+.pg{margin-bottom:10px}.pg b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px}
+.ed-sec.full{grid-column:1/-1;margin:14px 0 0}
+.ord{border:1px solid var(--line);margin-bottom:8px;background:var(--surface)}
+.ord summary{display:grid;grid-template-columns:150px 130px 1fr 170px 100px 190px;gap:10px;align-items:center;padding:10px 12px;cursor:pointer;list-style:none;font-size:14px}
+.ord summary::-webkit-details-marker{display:none}
+.ord[open] summary{border-bottom:1px solid var(--line)}
+.ord .ord-b{padding:12px}
+.ord .o-st{padding:6px}
+@media (max-width:900px){.ord summary{grid-template-columns:1fr 1fr}}
