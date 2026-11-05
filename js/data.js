@@ -41,7 +41,7 @@
     'menu::Prijzen leveranciers': 'management', 'housekeeping::Prijzen leveranciers': 'management',
     'menu::Menukaart (alle categorieen)': 'staff', 'menu::Recepten': 'staff', 'menu::F&B cost analyse': 'staff', 'menu::F&B rekenmodule': 'staff', 'menu::Foodcost': 'staff', 'menu::Menu-analyse': 'staff', 'menu::Margecontributie / Mix-marge': 'staff', 'menu::Klantmenu (QR)': 'staff', 'menu::Seizoen & specials': 'staff',
     // Business
-    'business::Dashboard & KPI': 'management', 'business::Omzet & rapporten': 'staff', 'business::Boekhouding': 'management', 'business::Balans': 'management', 'business::BTW': 'staff', 'business::Lonen & afbetalingen': 'management', 'business::Kostengroepen': 'management', 'business::Documentenarchief': 'staff', 'business::Bedrijfsmodel': 'staff', 'business::Cashflow': 'management', 'business::Doelen': 'management', 'business::Rentabiliteit': 'management',
+    'business::Dashboard & KPI': 'management', 'business::Omzet & rapporten': 'staff', 'business::Dagomzet': 'management', 'business::Boekhouding': 'management', 'business::Balans': 'management', 'business::BTW': 'staff', 'business::Lonen & afbetalingen': 'management', 'business::Kostengroepen': 'management', 'business::Documentenarchief': 'staff', 'business::Bedrijfsmodel': 'staff', 'business::Cashflow': 'management', 'business::Doelen': 'management', 'business::Rentabiliteit': 'management',
     // Marketing (alles staff)
     'marketing::Campagnes': 'staff', 'marketing::Social media': 'staff', 'marketing::Reviews': 'staff', 'marketing::Nieuwsbrief': 'staff', 'marketing::Loyaliteit': 'staff', 'marketing::Gastenbestand': 'staff',
     // Housekeeping (alles staff)
@@ -959,11 +959,19 @@
   // samengestelde afrekening bij (synthetic: true; betaalwijze "inkomstenoverzicht") — maar enkel voor dagen waarop het OS zelf
   // geen afrekeningen heeft. Zo werken alle rapporten (omzet, KPI, doelen, weken/kwartalen, weekdagen) met de echte omzet.
   // Functies die op afzonderlijke verkopen steunen (uur, drankaanhechting, menu-engineering) vragen enkel de echte (realOnly).
+  /* Kassa actief vanaf (kosmo-kassa-v1): vóór die datum telt een betaling in de kassa niet als omzet en duwt ze geen dag uit de inkomstenlijst weg
+     (5 nov 2026: testbetalingen haalden zo drie echte dagen uit de rapporten). Zonder datum telt de kassa niet, tenzij er nog geen inkomstenlijst is. */
+  var KASSAKEY = 'kosmo-kassa-v1';
+  function getKassaVanaf() { try { return (JSON.parse(localStorage.getItem(KASSAKEY) || '{}') || {}).vanaf || ''; } catch (e) { return ''; } }
+  function setKassaVanaf(d) { try { localStorage.setItem(KASSAKEY, JSON.stringify({ vanaf: /^\d{4}-\d{2}-\d{2}$/.test(d || '') ? d : '' })); } catch (e) {} try { emit('data'); } catch (e) {} }
+  function kassaTeltOp(d) { var v = getKassaVanaf(); return v ? d >= v : !loadIncome().days.length; }
+  function _kassaBetalingen() { return getPayments().filter(function (p) { return kassaTeltOp(businessDate(p.at)); }); }
+  function kassaGenegeerd() { return getPayments().length - _kassaBetalingen().length; }
   function paymentsInRange(startStr, endStr, realOnly) {
-    var real = getPayments().filter(function (p) { var bd = businessDate(p.at); return bd >= startStr && bd <= endStr; });
+    var real = _kassaBetalingen().filter(function (p) { var bd = businessDate(p.at); return bd >= startStr && bd <= endStr; });
     if (realOnly) return real;
     var inc = loadIncome(); if (!inc.days.length) return real;
-    var pos = {}; getPayments().forEach(function (p) { pos[businessDate(p.at)] = 1; });
+    var pos = {}; _kassaBetalingen().forEach(function (p) { pos[businessDate(p.at)] = 1; });
     var out = real.slice();
     inc.days.forEach(function (d) { if (d.date < startStr || d.date > endStr || pos[d.date]) return; var p = _incomePayment(d); if (p) out.push(p); });
     return out;
@@ -1173,7 +1181,7 @@
   function closeDay() {
     var rep = computeReport(getDayPayments()); rep.date = businessDate(Date.now()); rep.savedAt = Date.now();
     var reps = getReports().filter(function (r) { return r.date !== rep.date; }); reps.push(rep); saveReports(reps);
-    try { if (typeof window !== 'undefined' && window.KosmoVoorbereiding) window.KosmoVoorbereiding.boekZ(rep); } catch (e) {}
+    try { if (kassaTeltOp(rep.date) && typeof window !== 'undefined' && window.KosmoVoorbereiding) window.KosmoVoorbereiding.boekZ(rep); } catch (e) {}
     return rep;
   }
   // gesloten sessies van vandaag (een tafelnummer kan meermaals voorkomen)
@@ -2078,7 +2086,7 @@
     saveRepay(rep); return p;
   }
   function removeRepayPlan(creditor) { var rep = loadRepay(), k = _lnorm(creditor); rep.plans = rep.plans.filter(function (x) { return _lnorm(x.creditor) !== k; }); saveRepay(rep); }
-  function _posDaySet() { var s = {}; getPayments().forEach(function (p) { s[businessDate(p.at)] = 1; }); return s; }
+  function _posDaySet() { var s = {}; _kassaBetalingen().forEach(function (p) { s[businessDate(p.at)] = 1; }); return s; }
   function incomeSummary(from, to) {
     var inc = loadIncome(), pos = _posDaySet();
     var o = { net: 0, vat: 0, food: 0, drink: 0, covers: 0, days: 0, overlapDays: 0, flagged: 0, byRate: {} };
@@ -2140,7 +2148,7 @@
   }
   // Laatste dag waarvoor er omzet bekend is (kassa of overzicht).
   function lastRevenueDate() {
-    var d = ''; getPayments().forEach(function (p) { var x = businessDate(p.at); if (x > d) d = x; });
+    var d = ''; _kassaBetalingen().forEach(function (p) { var x = businessDate(p.at); if (x > d) d = x; });
     loadIncome().days.forEach(function (x) { if (x.net > 0 && x.date > d) d = x.date; });
     return d;
   }
@@ -2423,7 +2431,7 @@
   function fnbSalesCost(from, to) {
     var F = window.FNB; if (!F || !F.kaartByMenuItem) return { cost: 0, linkedNet: 0 };
     var byItem = {};
-    getPayments().forEach(function (p) { var d = businessDate(p.at); if (from && d < from) return; if (to && d > to) return; (p.lines || []).forEach(function (l) { if (!l.itemId) return; var b = byItem[l.itemId] || (byItem[l.itemId] = { qty: 0, net: 0 }); var q = Number(l.qty || 0); b.qty += q; b.net += Number(l.price || 0) * q / (1 + Number(l.vatRate || 0) / 100); }); });
+    _kassaBetalingen().forEach(function (p) { var d = businessDate(p.at); if (from && d < from) return; if (to && d > to) return; (p.lines || []).forEach(function (l) { if (!l.itemId) return; var b = byItem[l.itemId] || (byItem[l.itemId] = { qty: 0, net: 0 }); var q = Number(l.qty || 0); b.qty += q; b.net += Number(l.price || 0) * q / (1 + Number(l.vatRate || 0) / 100); }); });
     var cost = 0, linkedNet = 0;
     Object.keys(byItem).forEach(function (id) { var k = F.kaartByMenuItem(id); if (!k) return; var r = F.calcKaart(k); var fc = r.totalFoodcostPerPortion || r.foodcostPerPortion || 0; cost += fc * byItem[id].qty; linkedNet += byItem[id].net; });
     return { cost: round2(cost), linkedNet: round2(linkedNet) };
@@ -3137,7 +3145,7 @@
     getAlias, getAliasPack, setAlias, getLineCat, setLineCat, SPEND_CATS, matchDocuments,
     getSpendCats, getSpendCatDefs, spendCatDef, spendCatIsFnb, addSpendCat, updateSpendCat, removeSpendCat,
     docArticles, applyMappingsToDocs, spendByCategory,
-    getActiveDocuments, spendCoverage, assetRegister, depreciation, lastRevenueDate, monthlyRevenue, breakEven, getIncome, importIncome, incomeSummary, financeReport, ledgerVatIn, vatReturn, getLedger, importLedger, updateLedgerEntry, setLedgerCell, vatPaidSummary, getRepayments, addRepayPlan, updateRepayPlan, removeRepayPlan, ledgerStatus, ledgerSpend, ledgerSummary, getDocInbox, setInboxStatus, matchSupplier, docFieldsFromExtraction, findDuplicateDoc, findDocIssues, markDuplicateDocs, getDocumentArchive,
+    getKassaVanaf, setKassaVanaf, kassaTeltOp, kassaGenegeerd, getActiveDocuments, spendCoverage, assetRegister, depreciation, lastRevenueDate, monthlyRevenue, breakEven, getIncome, importIncome, incomeSummary, financeReport, ledgerVatIn, vatReturn, getLedger, importLedger, updateLedgerEntry, setLedgerCell, vatPaidSummary, getRepayments, addRepayPlan, updateRepayPlan, removeRepayPlan, ledgerStatus, ledgerSpend, ledgerSummary, getDocInbox, setInboxStatus, matchSupplier, docFieldsFromExtraction, findDuplicateDoc, findDocIssues, markDuplicateDocs, getDocumentArchive,
     getDocSettings, setDocSettings, retentionDate, isSummaryInvoice, suggestLevernotas, compareTotals, linkLevernotas,
     getBizModel, updateBizGroup, addBizGroup, removeBizGroup, costGroupsReport, moveBizCategory, moveBizGroup, removeBizGroupInto, renameLedgerPost, moveLedgerPost, businessModelReport, fnbSalesCost,
     purchaseVatFor, docLineVat, inputVatSummary,
