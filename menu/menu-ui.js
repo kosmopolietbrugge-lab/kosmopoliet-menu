@@ -149,6 +149,7 @@
 /* ============================================================
    Allergie of intolerantie? — gedeeld door menu.html (met bestellen) en website-menu.html (enkel kijken).
    De keuze blijft op het toestel van de gast (sessionStorage); ze gaat enkel mee als de gast ze op de bon wil.
+   De gast ziet altijd alle gerechten en altijd waar een allergeen in zit: hij beslist zelf (koffie zonder het koekje, of een alternatief vragen).
    De kaart zegt nooit "veilig": altijd "volgens onze recepten".
    ============================================================ */
 (function () {
@@ -159,7 +160,7 @@
   var SUBS = { Gluten: ['Tarwe', 'Spelt', 'Kamut', 'Rogge', 'Gerst', 'Haver'], Noten: ['Amandel', 'Hazelnoot', 'Walnoot', 'Cashew', 'Pecan', 'Paranoot', 'Pistache', 'Macadamia'] };
   var opt = { bestellen: false, open: function () {}, close: function () {}, opnieuw: function () {} };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
-  function leeg() { return { lijst: [], subs: {}, soort: 'allergie', toon: false, bon: false }; }
+  function leeg() { return { lijst: [], subs: {}, soort: 'allergie', bon: false }; }
   function lees() { try { var o = JSON.parse(sessionStorage.getItem(KEY) || 'null'); if (o && Array.isArray(o.lijst)) { o.subs = o.subs || {}; return o; } } catch (e) {} return leeg(); }
   var st = lees();
   function bewaar() { try { sessionStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
@@ -189,14 +190,17 @@
     var s = subsVan(it, a), echt = s.filter(function (x) { return x !== '?'; });
     return '<span>' + esc(a) + '</span>' + (echt.length ? ' (' + echt.map(function (x) { return '<span>' + esc(x) + '</span>'; }).join(', ') + (s.indexOf('?') >= 0 ? ', …' : '') + ')' : '');
   }
-  function spoorHtml(it, hit) {
+  // alles = ook de bronnen buiten de gekozen subgroep (het detailscherm toont alles wat er in het gerecht zit).
+  function spoorHtml(it, hit, alles) {
     var sporen = (it.allergenInfo && it.allergenInfo.sporen) || [];
     return hit.map(function (a) {
-      var wil = st.subs[a] || [];
-      var regels = st.toon ? sporen.filter(function (s) { return s.a === a && (s.i || s.b) && (!wil.length || !s.s || s.s.some(function (x) { return wil.indexOf(x) >= 0; })); }) : [];
+      var wil = alles ? [] : (st.subs[a] || []);
+      var regels = sporen.filter(function (s) { return s.a === a && (s.i || s.b) && (!wil.length || !s.s || s.s.some(function (x) { return wil.indexOf(x) >= 0; })); });
       if (!regels.length) return '<div class="alg-gast-spoor"><span class="allergen">' + naamHtml(it, a) + '</span></div>';
       return regels.map(function (s) {
-        return '<div class="alg-gast-spoor"><span class="allergen">' + naamHtml(it, a) + '</span> ' + [s.i, s.b].filter(Boolean).map(function (x) { return '<span>' + esc(deel(x)) + '</span>'; }).join(' · ') + '</div>';
+        // Per regel enkel de subgroep van dat ingrediënt: Gluten (Tarwe) bij het koekje, Gluten (Haver) bij het melkje.
+        var label = s.s && s.s.length ? '<span>' + esc(a) + '</span> (' + s.s.map(function (x) { return '<span>' + esc(x) + '</span>'; }).join(', ') + ')' : naamHtml(it, a);
+        return '<div class="alg-gast-spoor"><span class="allergen">' + label + '</span> ' + [s.i, s.b].filter(Boolean).map(function (x) { return '<span>' + esc(deel(x)) + '</span>'; }).join(' · ') + '</div>';
       }).join('');
     }).join('');
   }
@@ -221,11 +225,9 @@
   }
   // Het blok "Allergenen" in het detailscherm.
   function blok(it) {
-    var alg = it.allergens || [], onbekend = !it.allergenInfo || it.allergenInfo.onbekend, h = alg.map(function (a) { return '<span class="allergen">' + naamHtml(it, a) + '</span>'; }).join('');
-    if (!alg.length) h = '<span class="allergen none">' + (onbekend ? 'Vraag het aan de bediening' : 'Geen van de 14 wettelijke allergenen gemeld') + '</span>';
-    else if (onbekend) h += '<span class="allergen none">Mogelijk meer: vraag het aan de bediening</span>';
-    var hit = aan() ? klasse(it, st.lijst).hit : [];
-    return '<div class="allergens">' + h + '</div>' + (st.toon && hit.length ? '<div class="alg-gast-detail">' + spoorHtml(it, hit) + '</div>' : '');
+    var alg = it.allergens || [], onbekend = !it.allergenInfo || it.allergenInfo.onbekend;
+    if (!alg.length) return '<div class="allergens"><span class="allergen none">' + (onbekend ? 'Vraag het aan de bediening' : 'Geen van de 14 wettelijke allergenen gemeld') + '</span></div>';
+    return '<div class="alg-gast-detail">' + spoorHtml(it, alg, true) + '</div>' + (onbekend ? '<div class="allergens"><span class="allergen none">Mogelijk meer: vraag het aan de bediening</span></div>' : '');
   }
   function bar() {
     var host = document.getElementById('alg-bar'); if (!host) return;
@@ -249,7 +251,6 @@
         '<p class="block-title">Wat is het?</p><div class="alg-gast-soort">' +
           '<button type="button" class="' + (nu.soort !== 'intolerantie' ? 'on' : '') + '" data-s="allergie" aria-pressed="' + (nu.soort !== 'intolerantie') + '"><b>Allergie</b><small>Ook sporen kunnen gevaarlijk zijn</small></button>' +
           '<button type="button" class="' + (nu.soort === 'intolerantie' ? 'on' : '') + '" data-s="intolerantie" aria-pressed="' + (nu.soort === 'intolerantie') + '"><b>Intolerantie</b><small>Kleine hoeveelheden gaan meestal</small></button></div>' +
-        '<label class="alg-gast-vink"><input type="checkbox" id="alg-toon"' + (nu.toon ? ' checked' : '') + '> <span>Toon waar het in zit</span></label>' +
         (opt.bestellen ? '<label class="alg-gast-vink"><input type="checkbox" id="alg-bon"' + (nu.bon ? ' checked' : '') + '> <span>Zet dit op mijn bestelling, zodat de keuken het ziet</span></label>' : '') +
         '<div class="basket-actions"><button type="button" class="btn-ghost" id="alg-wis">Wissen</button><button type="button" class="btn-primary" id="alg-ok">Toon de kaart</button></div>';
       body.querySelectorAll('[data-a]').forEach(function (b) { b.addEventListener('click', function () { var a = b.getAttribute('data-a'), i = nu.lijst.indexOf(a); if (i >= 0) { nu.lijst.splice(i, 1); delete nu.subs[a]; } else nu.lijst.push(a); lees2(); teken(); }); });
@@ -258,7 +259,7 @@
       document.getElementById('alg-wis').addEventListener('click', function () { pas(leeg()); });
       document.getElementById('alg-ok').addEventListener('click', function () { lees2(); pas(nu); });
     }
-    function lees2() { var t = document.getElementById('alg-toon'), o = document.getElementById('alg-bon'); if (t) nu.toon = t.checked; if (o) nu.bon = o.checked; }
+    function lees2() { var o = document.getElementById('alg-bon'); if (o) nu.bon = o.checked; }
     function pas(n) { st = n; bewaar(); bar(); opt.close(); opt.opnieuw(); }
     teken();
     opt.open();
