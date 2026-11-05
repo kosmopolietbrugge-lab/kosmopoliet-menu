@@ -41,7 +41,7 @@
     'menu::Prijzen leveranciers': 'management', 'housekeeping::Prijzen leveranciers': 'management',
     'menu::Menukaart (alle categorieen)': 'staff', 'menu::Recepten': 'staff', 'menu::F&B cost analyse': 'staff', 'menu::F&B rekenmodule': 'staff', 'menu::Foodcost': 'staff', 'menu::Menu-analyse': 'staff', 'menu::Margecontributie / Mix-marge': 'staff', 'menu::Klantmenu (QR)': 'staff', 'menu::Seizoen & specials': 'staff',
     // Business
-    'business::Dashboard & KPI': 'management', 'business::Omzet & rapporten': 'staff', 'business::Dagomzet': 'management', 'business::Boekhouding': 'management', 'business::Balans': 'management', 'business::BTW': 'staff', 'business::Lonen & afbetalingen': 'management', 'business::Kostengroepen': 'management', 'business::Documentenarchief': 'staff', 'business::Bedrijfsmodel': 'staff', 'business::Cashflow': 'management', 'business::Doelen': 'management', 'business::Rentabiliteit': 'management',
+    'business::Dashboard & KPI': 'management', 'business::Omzet & rapporten': 'staff', 'business::Dagomzet': 'management', 'business::Boekhouding': 'management', 'business::Balans': 'management', 'business::BTW': 'management', 'business::Lonen & afbetalingen': 'management', 'business::Kostengroepen': 'management', 'business::Documentenarchief': 'management', 'business::Bedrijfsmodel': 'management', 'business::Cashflow': 'management', 'business::Doelen': 'management', 'business::Rentabiliteit': 'management',
     // Marketing (alles staff)
     'marketing::Campagnes': 'staff', 'marketing::Social media': 'staff', 'marketing::Reviews': 'staff', 'marketing::Nieuwsbrief': 'staff', 'marketing::Loyaliteit': 'staff', 'marketing::Gastenbestand': 'staff',
     // Housekeeping (alles staff)
@@ -1297,7 +1297,15 @@
   function roleRank(r) { return ROLE_RANK[r] || 1; }
   // Hernoemde tegels behouden hun eerder ingestelde toegangsniveau (sleutel = module::tegelnaam).
   const LEGACY_TILE_KEYS = { 'menu::Recepten': 'menu::F&B rekenmodule', 'menu::F&B cost analyse': 'menu::Foodcost' };
-  function getClearance(key) { var d = load(); if (d.clearance && d.clearance[key]) return d.clearance[key]; var old = LEGACY_TILE_KEYS[key]; if (old && d.clearance && d.clearance[old]) return d.clearance[old]; return DEFAULT_CLEARANCE[key] || 'help'; }
+  function _clearanceIngesteld(key) { var d = load(); if (d.clearance && d.clearance[key]) return d.clearance[key]; var old = LEGACY_TILE_KEYS[key]; if (old && d.clearance && d.clearance[old]) return d.clearance[old]; return DEFAULT_CLEARANCE[key] || 'help'; }
+  // Tegels die afgeschermde gegevens nodig hebben (js/db-toegang.js), kunnen niet lager staan: zonder die gegevens bleven ze leeg.
+  var CLEARANCE_MIN = {
+    'business::Dashboard & KPI': 'management', 'business::Dagomzet': 'management', 'business::Boekhouding': 'management', 'business::Balans': 'management', 'business::BTW': 'management',
+    'business::Lonen & afbetalingen': 'management', 'business::Kostengroepen': 'management', 'business::Documentenarchief': 'management', 'business::Bedrijfsmodel': 'management',
+    'business::Cashflow': 'management', 'business::Rentabiliteit': 'management', 'marketing::Gastenbestand': 'staff'
+  };
+  function clearanceMinimum(key) { return CLEARANCE_MIN[key] || null; }
+  function getClearance(key) { var v = _clearanceIngesteld(key), m = CLEARANCE_MIN[key]; return m && roleRank(v) < roleRank(m) ? m : v; }
   function setClearance(key, level) { const d = load(); d.clearance = d.clearance || {}; d.clearance[key] = level; save(d); return level; }
   /* ---------- Praten met de centrale pc ----------
      Eén plek waar alle /auth/- en /crew/-aanvragen langsgaan, zodat de
@@ -1354,8 +1362,14 @@
   // Wie ben ik volgens de pc? Bij het opstarten opgevraagd, zodat een
   // ingetrokken sessie of een gewijzigde rol meteen doorwerkt.
   function whoAmI() {
-    return api('GET', '/auth/me').then(function (r) { setSession(r.user); return r.user; })
-      .catch(function (e) { if (e.status === 401) { clearSession(); return null; } return getSession(); });
+    var voor = getSession();
+    return api('GET', '/auth/me').then(function (r) {
+      setSession(r.user);
+      // Andere rol dan bij de vorige start: de sync opnieuw, zodat wat afgeschermd is meteen verdwijnt of verschijnt.
+      if (voor && r.user && voor.role !== r.user.role) { try { if (window.KosmoSync && window.KosmoSync.restart) window.KosmoSync.restart(); } catch (e) {} }
+      return r.user;
+    })
+      .catch(function (e) { if (e.status === 401) { clearSession(); try { if (window.KosmoSync && window.KosmoSync.opruimen) window.KosmoSync.opruimen(); } catch (x) {} return null; } return getSession(); });
   }
 
   function addUser(patch) {
@@ -1368,7 +1382,7 @@
     return api('DELETE', '/crew/user/' + encodeURIComponent(id)).then(function () { return refreshUsers(); });
   }
   function logoutServer() {
-    return api('POST', '/auth/logout', {}).catch(function () {}).then(function () { clearSession(); saveRoster([]); });
+    return api('POST', '/auth/logout', {}).catch(function () {}).then(function () { clearSession(); saveRoster([]); try { if (window.KosmoSync && window.KosmoSync.opruimen) return window.KosmoSync.opruimen(); } catch (e) {} });
   }
   // sessie = wie op DIT toestel is ingelogd (niet gesynct)
   function getSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (e) { return null; } }
@@ -3105,7 +3119,7 @@
   window.KosmoData = {
     ALLERGEEN_SUB: ALLERGEEN_SUB,
     getVisual, setVisual, checkStaffPin, setStaffPin, hasStaffPin,
-    getUsers, getUser, authUser, addUser, updateUser, removeUser, roleRank,
+    getUsers, getUser, authUser, addUser, updateUser, removeUser, roleRank, clearanceMinimum,
     refreshUsers, loginNames, whoAmI, logoutServer,
     getClearance, setClearance,
     getSession, setSession, clearSession,
