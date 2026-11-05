@@ -1173,6 +1173,7 @@
   function closeDay() {
     var rep = computeReport(getDayPayments()); rep.date = businessDate(Date.now()); rep.savedAt = Date.now();
     var reps = getReports().filter(function (r) { return r.date !== rep.date; }); reps.push(rep); saveReports(reps);
+    try { if (typeof window !== 'undefined' && window.KosmoVoorbereiding) window.KosmoVoorbereiding.boekZ(rep); } catch (e) {}
     return rep;
   }
   // gesloten sessies van vandaag (een tafelnummer kan meermaals voorkomen)
