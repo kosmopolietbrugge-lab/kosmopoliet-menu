@@ -1,0 +1,979 @@
+{
+ "versie": 1,
+ "bijgewerkt": "2026-11-05",
+ "instellingen": {
+  "naam": "Wijnhandel Annicaert",
+  "baseline": "Vind de wijn die bij jou past",
+  "webshop": "https://www.wijnhandelannicaert.be",
+  "contact": "Jan Breydellaan 40, 8200 Brugge · 050 31 73 91",
+  "kleuren": {
+   "primair": "#5c1a2b",
+   "accent": "#b08d57",
+   "achtergrond": "#f7f2ea",
+   "oppervlak": "#ffffff",
+   "tekst": "#2a2224"
+  },
+  "fontTitel": "Georgia, 'Times New Roman', serif",
+  "fontTekst": "'Segoe UI', system-ui, -apple-system, sans-serif",
+  "logo": "",
+  "toonDemo": true,
+  "beheerPin": "1234"
+ },
+ "wijnen": [
+  {
+   "id": "miopasso-fiano",
+   "naam": "Miopasso Fiano 2024",
+   "producent": "Miopasso",
+   "jaar": 2024,
+   "kleur": "wit",
+   "land": "Italië",
+   "regio": "Sicilië",
+   "druiven": [
+    "Fiano"
+   ],
+   "prijs": null,
+   "inhoud": 75,
+   "alcohol": null,
+   "vegan": null,
+   "bio": false,
+   "smaak": {
+    "body": 3,
+    "zoet": 1,
+    "zuur": 3,
+    "tannine": 1,
+    "fruit": 4,
+    "hout": 1
+   },
+   "aromas": [
+    "citrus",
+    "witte perzik",
+    "amandel"
+   ],
+   "pairing": [
+    "groenten",
+    "vis",
+    "pasta-risotto",
+    "plantaardig-eiwit",
+    "aperitief"
+   ],
+   "serveertemp": "8–10 °C",
+   "omschrijving": "Elegant, fris, fruitig en romig.",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "kosmopoliet-kaart"
+  },
+  {
+   "id": "santatresa-rinalanca",
+   "naam": "Santa Tresa 'Rina Lanca' Grillo/Viognier 2024",
+   "producent": "Santa Tresa",
+   "jaar": 2024,
+   "kleur": "wit",
+   "land": "Italië",
+   "regio": "Sicilië",
+   "druiven": [
+    "Grillo",
+    "Viognier"
+   ],
+   "prijs": null,
+   "inhoud": 75,
+   "alcohol": null,
+   "vegan": null,
+   "bio": false,
+   "smaak": {
+    "body": 4,
+    "zoet": 2,
+    "zuur": 2,
+    "tannine": 1,
+    "fruit": 5,
+    "hout": 1
+   },
+   "aromas": [
+    "tropisch fruit",
+    "abrikoos",
+    "bloesem"
+   ],
+   "pairing": [
+    "groenten",
+    "schaaldieren",
+    "gevogelte",
+    "plantaardig-eiwit",
+    "kaas-zacht"
+   ],
+   "serveertemp": "9–11 °C",
+   "omschrijving": "Aromatisch, zacht, complex, vol en tropisch.",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "kosmopoliet-kaart"
+  },
+  {
+   "id": "miopasso-primitivo",
+   "naam": "Miopasso Primitivo 2024",
+   "producent": "Miopasso",
+   "jaar": 2024,
+   "kleur": "rood",
+   "land": "Italië",
+   "regio": "Puglia",
+   "druiven": [
+    "Primitivo"
+   ],
+   "prijs": null,
+   "inhoud": 75,
+   "alcohol": null,
+   "vegan": null,
+   "bio": false,
+   "smaak": {
+    "body": 4,
+    "zoet": 2,
+    "zuur": 2,
+    "tannine": 3,
+    "fruit": 5,
+    "hout": 2
+   },
+   "aromas": [
+    "rijpe kers",
+    "pruim",
+    "specerijen"
+   ],
+   "pairing": [
+    "paddenstoelen",
+    "peulvruchten",
+    "pasta-risotto",
+    "plantaardig-eiwit",
+    "rund",
+    "kaas-hard"
+   ],
+   "serveertemp": "15–17 °C",
+   "omschrijving": "Rijk, fruitig, kruidig, zacht en toegankelijk.",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "kosmopoliet-kaart"
+  },
+  {
+   "id": "gordo-monastrell",
+   "naam": "Gordo Monastrell 2021",
+   "producent": "Gordo",
+   "jaar": 2021,
+   "kleur": "rood",
+   "land": "Spanje",
+   "regio": "Yecla",
+   "druiven": [
+    "Monastrell"
+   ],
+   "prijs": null,
+   "inhoud": 75,
+   "alcohol": null,
+   "vegan": null,
+   "bio": false,
+   "smaak": {
+    "body": 4,
+    "zoet": 1,
+    "zuur": 3,
+    "tannine": 4,
+    "fruit": 4,
+    "hout": 2
+   },
+   "aromas": [
+    "donker fruit",
+    "zwarte peper",
+    "tijm"
+   ],
+   "pairing": [
+    "paddenstoelen",
+    "peulvruchten",
+    "plantaardig-eiwit",
+    "rund",
+    "lam",
+    "wild",
+    "kaas-hard"
+   ],
+   "serveertemp": "16–18 °C",
+   "omschrijving": "Stevig, kruidig, donker fruit, in balans met soepele tannines.",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "kosmopoliet-kaart"
+  },
+  {
+   "id": "lamartine-rose",
+   "naam": "La Martine Rosé 2024",
+   "producent": "La Martine",
+   "jaar": 2024,
+   "kleur": "rose",
+   "land": "Frankrijk",
+   "regio": "Vin de France",
+   "druiven": [],
+   "prijs": null,
+   "inhoud": 75,
+   "alcohol": null,
+   "vegan": null,
+   "bio": false,
+   "smaak": {
+    "body": 2,
+    "zoet": 1,
+    "zuur": 4,
+    "tannine": 1,
+    "fruit": 3,
+    "hout": 1
+   },
+   "aromas": [
+    "aardbei",
+    "framboos",
+    "bloemen"
+   ],
+   "pairing": [
+    "groenten",
+    "vis",
+    "aperitief",
+    "schaaldieren"
+   ],
+   "serveertemp": "8–10 °C",
+   "omschrijving": "Fris, rood fruit, subtiel en floraal.",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "kosmopoliet-kaart"
+  },
+  {
+   "id": "lajara-prosecco",
+   "naam": "La Jara Prosecco DOC Treviso Brut",
+   "producent": "La Jara",
+   "jaar": null,
+   "kleur": "bubbels",
+   "land": "Italië",
+   "regio": "Veneto (Treviso)",
+   "druiven": [
+    "Glera"
+   ],
+   "prijs": null,
+   "inhoud": 75,
+   "alcohol": null,
+   "vegan": null,
+   "bio": false,
+   "smaak": {
+    "body": 2,
+    "zoet": 2,
+    "zuur": 4,
+    "tannine": 1,
+    "fruit": 3,
+    "hout": 1
+   },
+   "aromas": [
+    "groene appel",
+    "peer",
+    "bloesem"
+   ],
+   "pairing": [
+    "aperitief",
+    "groenten",
+    "vis",
+    "schaaldieren"
+   ],
+   "serveertemp": "6–8 °C",
+   "omschrijving": "Fijne pareling, droog, mineraal en aromatisch.",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "kosmopoliet-kaart"
+  },
+  {
+   "id": "demo-chablis",
+   "naam": "Demo · Chablis",
+   "producent": "",
+   "jaar": null,
+   "kleur": "wit",
+   "land": "Frankrijk",
+   "regio": "Bourgogne",
+   "druiven": [
+    "Chardonnay"
+   ],
+   "prijs": 18.5,
+   "inhoud": 75,
+   "alcohol": 12.5,
+   "vegan": true,
+   "bio": false,
+   "smaak": {
+    "body": 2,
+    "zoet": 1,
+    "zuur": 5,
+    "tannine": 1,
+    "fruit": 3,
+    "hout": 1
+   },
+   "aromas": [
+    "citroen",
+    "oesterschelp",
+    "krijt"
+   ],
+   "pairing": [
+    "vis",
+    "schaaldieren",
+    "groenten",
+    "kaas-zacht"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo"
+  },
+  {
+   "id": "demo-meursault",
+   "naam": "Demo · Bourgogne Chardonnay op hout",
+   "producent": "",
+   "jaar": null,
+   "kleur": "wit",
+   "land": "Frankrijk",
+   "regio": "Bourgogne",
+   "druiven": [
+    "Chardonnay"
+   ],
+   "prijs": 32,
+   "inhoud": 75,
+   "alcohol": 13.5,
+   "vegan": false,
+   "bio": false,
+   "smaak": {
+    "body": 4,
+    "zoet": 1,
+    "zuur": 3,
+    "tannine": 1,
+    "fruit": 3,
+    "hout": 4
+   },
+   "aromas": [
+    "boter",
+    "hazelnoot",
+    "vanille"
+   ],
+   "pairing": [
+    "gevogelte",
+    "vis",
+    "paddenstoelen",
+    "pasta-risotto"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo"
+  },
+  {
+   "id": "demo-riesling",
+   "naam": "Demo · Riesling Kabinett",
+   "producent": "",
+   "jaar": null,
+   "kleur": "wit",
+   "land": "Duitsland",
+   "regio": "Mosel",
+   "druiven": [
+    "Riesling"
+   ],
+   "prijs": 16,
+   "inhoud": 75,
+   "alcohol": 9,
+   "vegan": true,
+   "bio": false,
+   "smaak": {
+    "body": 2,
+    "zoet": 3,
+    "zuur": 5,
+    "tannine": 1,
+    "fruit": 4,
+    "hout": 1
+   },
+   "aromas": [
+    "limoen",
+    "perzik",
+    "petroleum"
+   ],
+   "pairing": [
+    "groenten",
+    "schaaldieren",
+    "varken",
+    "plantaardig-eiwit"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo"
+  },
+  {
+   "id": "demo-sauvignon",
+   "naam": "Demo · Sauvignon Blanc",
+   "producent": "",
+   "jaar": null,
+   "kleur": "wit",
+   "land": "Nieuw-Zeeland",
+   "regio": "Marlborough",
+   "druiven": [
+    "Sauvignon Blanc"
+   ],
+   "prijs": 14.5,
+   "inhoud": 75,
+   "alcohol": 13,
+   "vegan": true,
+   "bio": true,
+   "smaak": {
+    "body": 2,
+    "zoet": 1,
+    "zuur": 5,
+    "tannine": 1,
+    "fruit": 5,
+    "hout": 1
+   },
+   "aromas": [
+    "passievrucht",
+    "gras",
+    "kruisbes"
+   ],
+   "pairing": [
+    "groenten",
+    "kaas-zacht",
+    "vis",
+    "aperitief"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo"
+  },
+  {
+   "id": "demo-gewurz",
+   "naam": "Demo · Gewürztraminer",
+   "producent": "",
+   "jaar": null,
+   "kleur": "wit",
+   "land": "Frankrijk",
+   "regio": "Elzas",
+   "druiven": [
+    "Gewürztraminer"
+   ],
+   "prijs": 17,
+   "inhoud": 75,
+   "alcohol": 13.5,
+   "vegan": null,
+   "bio": false,
+   "smaak": {
+    "body": 4,
+    "zoet": 3,
+    "zuur": 2,
+    "tannine": 1,
+    "fruit": 5,
+    "hout": 1
+   },
+   "aromas": [
+    "lychee",
+    "roos",
+    "gember"
+   ],
+   "pairing": [
+    "groenten",
+    "plantaardig-eiwit",
+    "kaas-zacht"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo"
+  },
+  {
+   "id": "demo-provence",
+   "naam": "Demo · Côtes de Provence Rosé",
+   "producent": "",
+   "jaar": null,
+   "kleur": "rose",
+   "land": "Frankrijk",
+   "regio": "Provence",
+   "druiven": [
+    "Grenache",
+    "Cinsault"
+   ],
+   "prijs": 15,
+   "inhoud": 75,
+   "alcohol": 13,
+   "vegan": true,
+   "bio": true,
+   "smaak": {
+    "body": 2,
+    "zoet": 1,
+    "zuur": 4,
+    "tannine": 1,
+    "fruit": 3,
+    "hout": 1
+   },
+   "aromas": [
+    "perzik",
+    "rode bes",
+    "kruiden"
+   ],
+   "pairing": [
+    "groenten",
+    "vis",
+    "aperitief",
+    "gevogelte"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo"
+  },
+  {
+   "id": "demo-pinot",
+   "naam": "Demo · Pinot Noir",
+   "producent": "",
+   "jaar": null,
+   "kleur": "rood",
+   "land": "Frankrijk",
+   "regio": "Bourgogne",
+   "druiven": [
+    "Pinot Noir"
+   ],
+   "prijs": 24,
+   "inhoud": 75,
+   "alcohol": 13,
+   "vegan": true,
+   "bio": false,
+   "smaak": {
+    "body": 2,
+    "zoet": 1,
+    "zuur": 4,
+    "tannine": 2,
+    "fruit": 4,
+    "hout": 2
+   },
+   "aromas": [
+    "kers",
+    "framboos",
+    "bosgrond"
+   ],
+   "pairing": [
+    "paddenstoelen",
+    "gevogelte",
+    "vis",
+    "varken",
+    "pasta-risotto"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo"
+  },
+  {
+   "id": "demo-beaujolais",
+   "naam": "Demo · Beaujolais Villages",
+   "producent": "",
+   "jaar": null,
+   "kleur": "rood",
+   "land": "Frankrijk",
+   "regio": "Beaujolais",
+   "druiven": [
+    "Gamay"
+   ],
+   "prijs": 12.5,
+   "inhoud": 75,
+   "alcohol": 12.5,
+   "vegan": true,
+   "bio": false,
+   "smaak": {
+    "body": 2,
+    "zoet": 1,
+    "zuur": 3,
+    "tannine": 1,
+    "fruit": 5,
+    "hout": 1
+   },
+   "aromas": [
+    "framboos",
+    "banaan",
+    "viooltje"
+   ],
+   "pairing": [
+    "groenten",
+    "varken",
+    "gevogelte",
+    "kaas-zacht",
+    "aperitief"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo"
+  },
+  {
+   "id": "demo-rioja",
+   "naam": "Demo · Rioja Reserva",
+   "producent": "",
+   "jaar": null,
+   "kleur": "rood",
+   "land": "Spanje",
+   "regio": "Rioja",
+   "druiven": [
+    "Tempranillo"
+   ],
+   "prijs": 19.5,
+   "inhoud": 75,
+   "alcohol": 14,
+   "vegan": false,
+   "bio": false,
+   "smaak": {
+    "body": 4,
+    "zoet": 1,
+    "zuur": 3,
+    "tannine": 3,
+    "fruit": 3,
+    "hout": 4
+   },
+   "aromas": [
+    "vanille",
+    "leder",
+    "gedroogde kers"
+   ],
+   "pairing": [
+    "lam",
+    "rund",
+    "paddenstoelen",
+    "kaas-hard"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo"
+  },
+  {
+   "id": "demo-bordeaux",
+   "naam": "Demo · Bordeaux Supérieur",
+   "producent": "",
+   "jaar": null,
+   "kleur": "rood",
+   "land": "Frankrijk",
+   "regio": "Bordeaux",
+   "druiven": [
+    "Merlot",
+    "Cabernet Sauvignon"
+   ],
+   "prijs": 16.5,
+   "inhoud": 75,
+   "alcohol": 13.5,
+   "vegan": null,
+   "bio": false,
+   "smaak": {
+    "body": 4,
+    "zoet": 1,
+    "zuur": 3,
+    "tannine": 4,
+    "fruit": 3,
+    "hout": 3
+   },
+   "aromas": [
+    "cassis",
+    "ceder",
+    "tabak"
+   ],
+   "pairing": [
+    "rund",
+    "lam",
+    "wild",
+    "kaas-hard"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo"
+  },
+  {
+   "id": "demo-malbec",
+   "naam": "Demo · Malbec",
+   "producent": "",
+   "jaar": null,
+   "kleur": "rood",
+   "land": "Argentinië",
+   "regio": "Mendoza",
+   "druiven": [
+    "Malbec"
+   ],
+   "prijs": 13.5,
+   "inhoud": 75,
+   "alcohol": 14.5,
+   "vegan": true,
+   "bio": false,
+   "smaak": {
+    "body": 5,
+    "zoet": 1,
+    "zuur": 2,
+    "tannine": 4,
+    "fruit": 5,
+    "hout": 3
+   },
+   "aromas": [
+    "braam",
+    "pruim",
+    "cacao"
+   ],
+   "pairing": [
+    "rund",
+    "lam",
+    "peulvruchten",
+    "plantaardig-eiwit"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo"
+  },
+  {
+   "id": "demo-cava",
+   "naam": "Demo · Cava Brut Nature",
+   "producent": "",
+   "jaar": null,
+   "kleur": "bubbels",
+   "land": "Spanje",
+   "regio": "Penedès",
+   "druiven": [
+    "Macabeo",
+    "Xarel·lo",
+    "Parellada"
+   ],
+   "prijs": 11,
+   "inhoud": 75,
+   "alcohol": 11.5,
+   "vegan": true,
+   "bio": true,
+   "smaak": {
+    "body": 2,
+    "zoet": 1,
+    "zuur": 4,
+    "tannine": 1,
+    "fruit": 3,
+    "hout": 1
+   },
+   "aromas": [
+    "appel",
+    "brioche",
+    "amandel"
+   ],
+   "pairing": [
+    "aperitief",
+    "vis",
+    "schaaldieren",
+    "groenten"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo"
+  },
+  {
+   "id": "demo-champagne",
+   "naam": "Demo · Champagne Brut",
+   "producent": "",
+   "jaar": null,
+   "kleur": "bubbels",
+   "land": "Frankrijk",
+   "regio": "Champagne",
+   "druiven": [
+    "Chardonnay",
+    "Pinot Noir",
+    "Meunier"
+   ],
+   "prijs": 38,
+   "inhoud": 75,
+   "alcohol": 12,
+   "vegan": null,
+   "bio": false,
+   "smaak": {
+    "body": 3,
+    "zoet": 2,
+    "zuur": 4,
+    "tannine": 1,
+    "fruit": 3,
+    "hout": 2
+   },
+   "aromas": [
+    "toast",
+    "citrus",
+    "witte bloemen"
+   ],
+   "pairing": [
+    "aperitief",
+    "schaaldieren",
+    "vis",
+    "gevogelte"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo"
+  },
+  {
+   "id": "demo-sauternes",
+   "naam": "Demo · Sauternes (50 cl)",
+   "producent": "",
+   "jaar": null,
+   "kleur": "zoet",
+   "land": "Frankrijk",
+   "regio": "Bordeaux",
+   "druiven": [
+    "Sémillon",
+    "Sauvignon Blanc"
+   ],
+   "prijs": 29,
+   "inhoud": 50,
+   "alcohol": 13.5,
+   "vegan": null,
+   "bio": false,
+   "smaak": {
+    "body": 5,
+    "zoet": 5,
+    "zuur": 3,
+    "tannine": 1,
+    "fruit": 5,
+    "hout": 2
+   },
+   "aromas": [
+    "honing",
+    "abrikoos",
+    "saffraan"
+   ],
+   "pairing": [
+    "kaas-blauw",
+    "fruitdessert"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo"
+  },
+  {
+   "id": "demo-moscato",
+   "naam": "Demo · Moscato d'Asti",
+   "producent": "",
+   "jaar": null,
+   "kleur": "zoet",
+   "land": "Italië",
+   "regio": "Piëmont",
+   "druiven": [
+    "Moscato"
+   ],
+   "prijs": 12,
+   "inhoud": 75,
+   "alcohol": 5.5,
+   "vegan": true,
+   "bio": false,
+   "smaak": {
+    "body": 1,
+    "zoet": 4,
+    "zuur": 3,
+    "tannine": 1,
+    "fruit": 5,
+    "hout": 1
+   },
+   "aromas": [
+    "druif",
+    "perzik",
+    "oranjebloesem"
+   ],
+   "pairing": [
+    "fruitdessert",
+    "aperitief"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo"
+  },
+  {
+   "id": "demo-ruby",
+   "naam": "Demo · Ruby Port",
+   "producent": "",
+   "jaar": null,
+   "kleur": "versterkt",
+   "land": "Portugal",
+   "regio": "Douro",
+   "druiven": [
+    "Touriga Nacional",
+    "Tinta Roriz"
+   ],
+   "prijs": 17,
+   "inhoud": 75,
+   "alcohol": 19.5,
+   "vegan": true,
+   "bio": false,
+   "smaak": {
+    "body": 5,
+    "zoet": 4,
+    "zuur": 2,
+    "tannine": 3,
+    "fruit": 5,
+    "hout": 1
+   },
+   "aromas": [
+    "braam",
+    "pruim",
+    "chocolade"
+   ],
+   "pairing": [
+    "chocolade",
+    "kaas-blauw"
+   ],
+   "serveertemp": "",
+   "omschrijving": "",
+   "url": "",
+   "foto": "",
+   "actief": true,
+   "uitgelicht": false,
+   "bron": "demo"
+  }
+ ]
+}
