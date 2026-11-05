@@ -41,7 +41,7 @@
     'menu::Prijzen leveranciers': 'management', 'housekeeping::Prijzen leveranciers': 'management',
     'menu::Menukaart (alle categorieen)': 'staff', 'menu::Recepten': 'staff', 'menu::F&B cost analyse': 'staff', 'menu::F&B rekenmodule': 'staff', 'menu::Foodcost': 'staff', 'menu::Menu-analyse': 'staff', 'menu::Margecontributie / Mix-marge': 'staff', 'menu::Klantmenu (QR)': 'staff', 'menu::Seizoen & specials': 'staff',
     // Business
-    'business::Dashboard & KPI': 'management', 'business::Omzet & rapporten': 'staff', 'business::Dagomzet': 'management', 'business::Boekhouding': 'management', 'business::Balans': 'management', 'business::BTW': 'management', 'business::Lonen & afbetalingen': 'management', 'business::Kostengroepen': 'management', 'business::Documentenarchief': 'management', 'business::Bedrijfsmodel': 'management', 'business::Cashflow': 'management', 'business::Doelen': 'management', 'business::Rentabiliteit': 'management',
+    'business::Dashboard & KPI': 'management', 'business::Omzet & rapporten': 'staff', 'business::Dagomzet': 'management', 'business::Boekhouding': 'management', 'business::Balans': 'management', 'business::BTW': 'staff', 'business::Lonen & afbetalingen': 'management', 'business::Kostengroepen': 'management', 'business::Documentenarchief': 'management', 'business::Bedrijfsmodel': 'staff', 'business::Cashflow': 'management', 'business::Doelen': 'management', 'business::Rentabiliteit': 'management',
     // Marketing (alles staff)
     'marketing::Campagnes': 'staff', 'marketing::Social media': 'staff', 'marketing::Reviews': 'staff', 'marketing::Nieuwsbrief': 'staff', 'marketing::Loyaliteit': 'staff', 'marketing::Gastenbestand': 'staff',
     // Housekeeping (alles staff)
@@ -1298,11 +1298,11 @@
   // Hernoemde tegels behouden hun eerder ingestelde toegangsniveau (sleutel = module::tegelnaam).
   const LEGACY_TILE_KEYS = { 'menu::Recepten': 'menu::F&B rekenmodule', 'menu::F&B cost analyse': 'menu::Foodcost' };
   function _clearanceIngesteld(key) { var d = load(); if (d.clearance && d.clearance[key]) return d.clearance[key]; var old = LEGACY_TILE_KEYS[key]; if (old && d.clearance && d.clearance[old]) return d.clearance[old]; return DEFAULT_CLEARANCE[key] || 'help'; }
-  // Tegels die afgeschermde gegevens nodig hebben (js/db-toegang.js), kunnen niet lager staan: zonder die gegevens bleven ze leeg.
+  // Tegels die afgeschermde gegevens tonen of bewerken (js/db-toegang.js), kunnen niet lager staan. Rapporten (omzet, btw, balans,
+  // bedrijfsmodel, KPI, cashflow, rentabiliteit) werken voor staff met de cijferspiegel en zijn vrij in te stellen.
   var CLEARANCE_MIN = {
-    'business::Dashboard & KPI': 'management', 'business::Dagomzet': 'management', 'business::Boekhouding': 'management', 'business::Balans': 'management', 'business::BTW': 'management',
-    'business::Lonen & afbetalingen': 'management', 'business::Kostengroepen': 'management', 'business::Documentenarchief': 'management', 'business::Bedrijfsmodel': 'management',
-    'business::Cashflow': 'management', 'business::Rentabiliteit': 'management', 'marketing::Gastenbestand': 'staff'
+    'business::Dagomzet': 'management', 'business::Boekhouding': 'management', 'business::Lonen & afbetalingen': 'management', 'business::Kostengroepen': 'management',
+    'business::Documentenarchief': 'management', 'marketing::Gastenbestand': 'staff'
   };
   function clearanceMinimum(key) { return CLEARANCE_MIN[key] || null; }
   function getClearance(key) { var v = _clearanceIngesteld(key), m = CLEARANCE_MIN[key]; return m && roleRank(v) < roleRank(m) ? m : v; }
@@ -1502,8 +1502,14 @@
 
   /* ---------- Documenten: facturen & levernota's (de intake / "het brein") ---------- */
   var DOCKEY = 'kosmo-documents-v1';
-  function loadDocuments() { try { return JSON.parse(localStorage.getItem(DOCKEY) || '[]'); } catch (e) { return []; } }
-  function saveDocuments(list) { try { localStorage.setItem(DOCKEY, JSON.stringify(list)); } catch (e) {} broadcast('documents'); try { emit('data'); } catch (e) {} }
+  /* Cijferspiegel (tools/cijfers-spiegel.js): op een toestel zonder kasboek, facturen of loonmodule (staff) de cijfers van de centrale pc,
+     met dezelfde totalen maar zonder lonen per persoon. Alleen lezen: bewaren gebeurt op een toestel van management. */
+  var SPIEGELKEY = 'kosmo-cijfers-v1';
+  function _spiegelDeel(deel) { try { var o = JSON.parse(localStorage.getItem(SPIEGELKEY) || 'null'); return o && Array.isArray(o[deel]) ? o[deel] : null; } catch (e) { return null; } }
+  function _leesOfSpiegel(key, deel) { var raw = localStorage.getItem(key); if (raw == null) { var s = _spiegelDeel(deel); if (s) return JSON.parse(JSON.stringify(s)); } try { return JSON.parse(raw || '[]'); } catch (e) { return []; } }
+  function _alleenSpiegel(key) { return localStorage.getItem(key) == null && localStorage.getItem(SPIEGELKEY) != null; }
+  function loadDocuments() { return _leesOfSpiegel(DOCKEY, 'documenten'); }
+  function saveDocuments(list) { if (_alleenSpiegel(DOCKEY)) return; try { localStorage.setItem(DOCKEY, JSON.stringify(list)); } catch (e) {} broadcast('documents'); try { emit('data'); } catch (e) {} }
   function _nextDocRef(list, type) { var pre = type === 'levernota' ? 'LN-' : 'F-'; var n = 0; (list || []).forEach(function (d) { var m = new RegExp(pre + '(\\d+)').exec(d.ref || ''); if (m) { var v = parseInt(m[1], 10); if (v > n) n = v; } }); return pre + String(n + 1).padStart(4, '0'); }
   function docTotal(d) { return round2((d && d.lines || []).reduce(function (s, l) { return s + (Number(l.qty || 0) * Number(l.price || 0)); }, 0)); }
   // getDocuments() geeft ALLES terug (ook duplicaten) — de Billit-import heeft ze
@@ -1904,8 +1910,8 @@
                   van die leverancier heeft. */
   var LEDGERKEY = 'kosmo-ledger-v1';
   var LEDGER_CAT_NAMES = ['Lonen & maaltijdcheques', 'Sociale lasten, vakantiegeld & personeelsverzekering', 'Afbetalingen & leningen'];
-  function loadLedger() { try { return JSON.parse(localStorage.getItem(LEDGERKEY) || '[]'); } catch (e) { return []; } }
-  function saveLedger(l) { try { localStorage.setItem(LEDGERKEY, JSON.stringify(l)); } catch (e) {} broadcast('ledger'); try { emit('data'); } catch (e) {} }
+  function loadLedger() { return _leesOfSpiegel(LEDGERKEY, 'kasboek'); }
+  function saveLedger(l) { if (_alleenSpiegel(LEDGERKEY)) return; try { localStorage.setItem(LEDGERKEY, JSON.stringify(l)); } catch (e) {} broadcast('ledger'); try { emit('data'); } catch (e) {} }
   function getLedger() { return loadLedger(); }
   // Voegt nieuwe regels toe (bestaande blijven staan, ook met je eigen aanpassingen). Maakt ontbrekende categorieën aan.
   // opts.supersede = { labels:[...], fromMonth:'YYYY-MM', note } : bestaande RAMINGEN van die posten vanaf die maand worden "vervangen"
@@ -1965,6 +1971,7 @@
       var e = r.entry;
       if (e.excluded) { r.status = 'uitgesloten'; r.factor = 0; r.reason = 'door jou uitgesloten'; return; }
       if (e.superseded) { r.status = 'overlap'; r.factor = 0; r.reason = String(e.superseded); return; }
+      if (e.spiegel) return; // uit de cijferspiegel: de centrale pc verrekende de overlap met facturen al
       if (e.kind === 'raming') {
         var repay = /afbetaling/.test(e.note || '') && !/microlease/i.test(e.label);
         var near = repay ? [] : docs.filter(function (d) { return d.date >= '2026-05-01' && Math.abs(_monthDiff(d.month, e.month)) <= 1 && _sameParty(e.label, d.sup); });
@@ -2267,8 +2274,8 @@
   function setHrProvider(p) { try { localStorage.setItem(HR_ACTIVE_KEY, p); } catch (e) {} broadcast('payroll'); }
 
   var PAYROLLKEY = 'kosmo-payroll-v1';
-  function loadPayroll() { try { return JSON.parse(localStorage.getItem(PAYROLLKEY) || '[]'); } catch (e) { return []; } }
-  function savePayroll(a) { try { localStorage.setItem(PAYROLLKEY, JSON.stringify(a)); } catch (e) {} broadcast('payroll'); }
+  function loadPayroll() { return _leesOfSpiegel(PAYROLLKEY, 'lonen'); }
+  function savePayroll(a) { if (_alleenSpiegel(PAYROLLKEY)) return; try { localStorage.setItem(PAYROLLKEY, JSON.stringify(a)); } catch (e) {} broadcast('payroll'); }
   function getPayroll(period) { var a = loadPayroll(); return period ? a.filter(function (r) { return r.period === period; }) : a; }
   function payrollPeriods() { var s = {}; loadPayroll().forEach(function (r) { if (r.period) s[r.period] = 1; }); return Object.keys(s).sort().reverse(); }
   function addPayrollEntry(patch) { var a = loadPayroll(); var rec = Object.assign({ id: uid('pr'), kind: 'loon', period: '', employeeId: '', provider: getHrProvider() }, patch || {}); a.push(rec); savePayroll(a); return rec; }
