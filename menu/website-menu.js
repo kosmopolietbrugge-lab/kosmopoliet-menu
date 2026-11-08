@@ -29,7 +29,7 @@
 
   function renderHead() {
     var v = D.getVisual();
-    $('#m-bg').style.backgroundImage = 'url("' + (D.resolveImg(v.heroImg) || 'assets/img/hero.jpg') + '")';
+    $('#m-bg').style.backgroundImage = 'url("' + (D.resolveImg(D.heroVoor ? D.heroVoor('menu') : v.heroImg) || 'assets/img/hero.jpg') + '")';
     $('#m-logo').src = D.resolveImg(v.logo) || 'assets/img/mark-gold.png';
     $('#m-name').textContent = v.name;
     $('#m-baseline').textContent = v.baseline;

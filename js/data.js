@@ -237,9 +237,72 @@
   function getVisual() { return load().visual; }
   function setVisual(patch) {
     const d = load();
-    d.visual = Object.assign({}, d.visual, patch);
+    const oud = d.visual || {};
+    d.visual = Object.assign({}, oud, patch);
+    // Elke startfoto die ooit gebruikt werd, blijft in de bibliotheek staan (v0.106.0).
+    ['heroImg', 'osHeroImg'].forEach(function (k) { if (patch && k in patch && patch[k] !== oud[k]) d.visual.heroLib = _heroOnthoud(d.visual, [oud[k], patch[k]]); });
     save(d);
     return d.visual;
+  }
+
+  /* ---------- Startfoto's (v0.106.0) ----------
+     Eén bibliotheek voor de foto bovenaan het OS (startscherm) en bovenaan de klantenkaart. Ze staat in `visual`, zodat
+     de gastkaart ze meekrijgt. Een foto met een periode (dd/mm, jaarloos) is een themafoto: binnen die periode gaat ze
+     vóór de standaardfoto van het OS en/of de klantenkaart, daarna komt vanzelf de standaard terug. */
+  var HERO_STD = [
+    { id: 'std', src: 'assets/img/hero.jpg', naam: 'Standaard', van: '', tot: '', os: false, menu: false },
+    { id: 'halloween', src: 'assets/img/hero-halloween.jpg', naam: 'Halloween', van: '10-24', tot: '10-31', os: true, menu: false },
+    { id: 'klaproos', src: 'assets/img/hero-klaproos.jpg', naam: 'Wapenstilstand (klaproos)', van: '11-04', tot: '11-11', os: true, menu: false }
+  ];
+  function _heroMd(s) { return /^\d\d-\d\d$/.test(String(s || '')) ? s : ''; }
+  function _heroBinnen(md, van, tot) { if (!van || !tot) return false; return van <= tot ? (md >= van && md <= tot) : (md >= van || md <= tot); }
+  function _heroOnthoud(v, srcs) {
+    var lib = Array.isArray(v.heroLib) ? v.heroLib.slice() : [];
+    (srcs || []).forEach(function (src) {
+      if (!src || HERO_STD.some(function (x) { return x.src === src; })) return;
+      var x = lib.filter(function (y) { return y.src === src; })[0];
+      if (x) x.laatst = Date.now();
+      else lib.push({ id: uid('hero'), src: src, naam: 'Eerder gebruikt', van: '', tot: '', os: false, menu: false, laatst: Date.now() });
+    });
+    return lib;
+  }
+  // De volledige bibliotheek: ingebouwde foto's (tenzij verwijderd), opgeslagen foto's, en de huidige standaardfoto's.
+  function heroLib(v) {
+    v = v || getVisual() || {};
+    var eigen = Array.isArray(v.heroLib) ? v.heroLib : [], weg = Array.isArray(v.heroWeg) ? v.heroWeg : [], out = [];
+    HERO_STD.forEach(function (s) { if (weg.indexOf(s.id) >= 0 && s.id !== 'std') return; var e = eigen.filter(function (x) { return x.id === s.id; })[0]; out.push(Object.assign({}, s, e || {}, { src: s.src, vast: true })); });
+    eigen.forEach(function (x) { if (!HERO_STD.some(function (s) { return s.id === x.id; }) && x.src) out.push(Object.assign({}, x)); });
+    _heroOnthoud({ heroLib: out }, [v.heroImg, v.osHeroImg]).forEach(function (x) { if (!out.some(function (y) { return y.src === x.src; })) out.push(x); });
+    out.forEach(function (x) { x.van = _heroMd(x.van); x.tot = _heroMd(x.tot); });
+    return out;
+  }
+  function heroStandaard(doel, v) { v = v || getVisual() || {}; return (doel === 'os' ? v.osHeroImg : v.heroImg) || 'assets/img/hero.jpg'; }
+  // Welke themafoto geldt op die dag voor 'os' of 'menu' (of null).
+  function heroThema(doel, datum, v) {
+    v = v || getVisual() || {}; var md = String(datum || todayStr()).slice(5, 10);
+    return heroLib(v).filter(function (x) { return x[doel] && _heroBinnen(md, x.van, x.tot); })[0] || null;
+  }
+  function heroVoor(doel, datum) { var v = getVisual() || {}, t = heroThema(doel, datum, v); return t ? t.src : heroStandaard(doel, v); }
+  // Eén foto in de bibliotheek aanpassen (naam, periode, waar ze geldt). Ingebouwde foto's bewaren enkel hun aanpassingen.
+  function setHero(id, patch) {
+    var v = getVisual() || {}, lib = Array.isArray(v.heroLib) ? v.heroLib.slice() : [], x = lib.filter(function (y) { return y.id === id; })[0];
+    if (!x) { var bron = heroLib(v).filter(function (y) { return y.id === id; })[0]; if (!bron) return null; x = { id: id, src: bron.src, naam: bron.naam, van: bron.van, tot: bron.tot, os: bron.os, menu: bron.menu }; lib.push(x); }
+    ['naam', 'van', 'tot', 'os', 'menu'].forEach(function (k) { if (patch && k in patch) x[k] = k === 'van' || k === 'tot' ? _heroMd(patch[k]) : k === 'naam' ? String(patch[k] || '').trim() : !!patch[k]; });
+    setVisual({ heroLib: lib }); return x;
+  }
+  function addHero(src, naam) {
+    if (!src) return null; var v = getVisual() || {}, lib = Array.isArray(v.heroLib) ? v.heroLib.slice() : [];
+    var x = lib.filter(function (y) { return y.src === src; })[0];
+    if (!x) { x = { id: uid('hero'), src: src, naam: String(naam || 'Nieuwe foto'), van: '', tot: '', os: false, menu: false, laatst: Date.now() }; lib.push(x); setVisual({ heroLib: lib }); }
+    return x;
+  }
+  function removeHero(id) {
+    if (id === 'std') return false; var v = getVisual() || {};
+    var x = heroLib(v).filter(function (y) { return y.id === id; })[0]; if (!x) return false;
+    if (x.src === v.heroImg || x.src === v.osHeroImg) return false; // eerst een andere standaardfoto kiezen
+    var patch = { heroLib: (v.heroLib || []).filter(function (y) { return y.id !== id; }) };
+    if (x.vast) patch.heroWeg = (v.heroWeg || []).concat([id]);
+    setVisual(patch); return true;
   }
 
   /* ---------- Personeelscode (tafel 0 = personeel, gratis) ----------
@@ -3133,7 +3196,7 @@
 
   window.KosmoData = {
     ALLERGEEN_SUB: ALLERGEEN_SUB,
-    getVisual, setVisual, checkStaffPin, setStaffPin, hasStaffPin,
+    getVisual, setVisual, heroLib, heroStandaard, heroThema, heroVoor, setHero, addHero, removeHero, checkStaffPin, setStaffPin, hasStaffPin,
     getUsers, getUser, authUser, addUser, updateUser, removeUser, roleRank, clearanceMinimum,
     refreshUsers, loginNames, whoAmI, logoutServer,
     getClearance, setClearance,
