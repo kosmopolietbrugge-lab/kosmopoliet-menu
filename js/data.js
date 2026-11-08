@@ -1346,7 +1346,7 @@
   // moet ingevuld zijn vóór iemand aangemeld is.
   function loginNames() {
     return api('GET', '/auth/names').then(function (r) { return (r.users || []).map(function (u) { return u.name; }); })
-      .catch(function () { return getUsers().map(function (u) { return u.name; }); });
+      .catch(function () { return getUsers().filter(function (u) { return u.hasPass !== false; }).map(function (u) { return u.name; }); });
   }
 
   /* ---------- Aanmelden ----------
