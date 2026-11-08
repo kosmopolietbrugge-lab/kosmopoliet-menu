@@ -2,7 +2,7 @@
    Kosmopoliet — gast-sync voor de PUBLIEKE kaart (website, enkel kijken)
 
    Vervangt menu/gast-sync.js op de website. De echte versie praat met de
-   centrale pc (/gast/kaart, mandje, bestellen). Deze leest enkel kaart.json,
+   Kissing Karrots Server (/gast/kaart, mandje, bestellen). Deze leest enkel kaart.json,
    het bestand dat de server bij elke wijziging in het OS opnieuw wegschrijft.
    Geen mandje, geen tafel, geen bestelling: er is niets om naartoe te sturen.
    De rest van de pagina (website-menu.js, data.js, menu.css) is exact dezelfde

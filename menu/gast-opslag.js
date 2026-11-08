@@ -3,7 +3,7 @@
 
    Staan het OS en een klantenkaart open in dezelfde browser, dan delen ze dezelfde localStorage. De kaart schrijft daar elke
    paar seconden de GASTVERSIE van de menukaart weg, zonder gearchiveerde en niet-voorradige gerechten. Het OS las die versie
-   en bewaarde ze bij de volgende wijziging op de centrale pc: gerechten verdwenen of kwamen terug met een nieuwe code.
+   en bewaarde ze bij de volgende wijziging op de Kissing Karrots Server: gerechten verdwenen of kwamen terug met een nieuwe code.
    Daarom krijgt elke kosmo-sleutel hier het voorvoegsel "gast:". Het OS laadt dit bestand niet en ziet die sleutels niet.
    ============================================================ */
 (function () {

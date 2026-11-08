@@ -313,3 +313,6 @@ button.table-badge{ cursor:pointer; font-family:inherit; }
 .alg-gast-sub .alg-gast-chips{ margin:8px 0 0; }
 .alg-gast-chip.klein{ font-size:13px; padding:7px 11px; background:var(--surface); }
 .alg-gast-chip.klein.on{ background:var(--gold); }
+/* Herkomst van de kaart (v0.105.0): klein, onderaan, niet storend. */
+.gm-credit{ display:flex; align-items:center; justify-content:center; gap:8px; margin:28px 0 18px; font-size:11.5px; letter-spacing:.04em; color:var(--dim); opacity:.85; }
+.gm-credit .dot{ width:7px; height:7px; border-radius:50%; background:#57c07f; flex:none; }

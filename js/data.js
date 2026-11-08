@@ -24,7 +24,7 @@
   // De teamleden stonden hier tot v0.58.8 als SEED_USERS, mét hun wachtwoord in
   // leesbare tekst, en werden mee opgeslagen in `kosmo-menu-data`. Dat pakket
   // gaat via de sync naar élk toestel dat de app opent — ook naar het toestel
-  // van een gast die de QR-code scant. Sinds v0.59.0 wonen ze op de centrale pc
+  // van een gast die de QR-code scant. Sinds v0.59.0 wonen ze op de Kissing Karrots Server
   // (server-crew.js) en komt hier nooit meer een wachtwoord langs: de app stuurt
   // er één op en krijgt ja of nee terug.
   // Standaard clearance per module (mod::<id>) en per sectie (<moduleId>::<titel>).
@@ -243,7 +243,7 @@
   }
 
   /* ---------- Personeelscode (tafel 0 = personeel, gratis) ----------
-     De code zelf staat op de centrale pc en komt hier nooit meer binnen.
+     De code zelf staat op de Kissing Karrots Server en komt hier nooit meer binnen.
      We sturen wat de gebruiker intikte op en krijgen ja of nee terug —
      zo valt ze niet uit de browseropslag te vissen. Beide functies geven
      een belofte (Promise) terug; de aanroeper wacht het antwoord af. */
@@ -1307,7 +1307,7 @@
   function clearanceMinimum(key) { return CLEARANCE_MIN[key] || null; }
   function getClearance(key) { var v = _clearanceIngesteld(key), m = CLEARANCE_MIN[key]; return m && roleRank(v) < roleRank(m) ? m : v; }
   function setClearance(key, level) { const d = load(); d.clearance = d.clearance || {}; d.clearance[key] = level; save(d); return level; }
-  /* ---------- Praten met de centrale pc ----------
+  /* ---------- Praten met de Kissing Karrots Server ----------
      Eén plek waar alle /auth/- en /crew/-aanvragen langsgaan, zodat de
      foutafhandeling en de cookie-instelling niet op tien plaatsen herhaald
      staan. `credentials: same-origin` is nodig: zonder die regel stuurt de
@@ -1324,7 +1324,7 @@
   }
 
   /* ---------- Teamleden ----------
-     De echte lijst woont op de centrale pc. Hier houden we een kopie zonder
+     De echte lijst woont op de Kissing Karrots Server. Hier houden we een kopie zonder
      wachtwoorden, zodat de schermen meteen getekend kunnen worden en blijven
      werken als de pc even wegvalt. getUsers() blijft dus gewoon een lijst
      teruggeven, net als voorheen — enkel de bron is veranderd. */
@@ -1391,7 +1391,7 @@
 
   /* ---------- Eigen profiel (v0.61.0) ----------
      Naam, contact, adres, bankrekeningnummer — net als het wachtwoord, leven
-     die enkel op de centrale pc (kosmo-crew.json), nooit in de gesynchroniseerde
+     die enkel op de Kissing Karrots Server (kosmo-crew.json), nooit in de gesynchroniseerde
      menukaart-data. Elk toestel vraagt ze op i.p.v. ze lokaal te bewaren.
      Bijwerken loopt gewoon via het bestaande updateUser(id, patch) — dezelfde
      /crew/user-route aanvaardt deze velden nu ook voor de eigenaar zelf. */
@@ -1502,7 +1502,7 @@
 
   /* ---------- Documenten: facturen & levernota's (de intake / "het brein") ---------- */
   var DOCKEY = 'kosmo-documents-v1';
-  /* Cijferspiegel (tools/cijfers-spiegel.js): op een toestel zonder kasboek, facturen of loonmodule (staff) de cijfers van de centrale pc,
+  /* Cijferspiegel (tools/cijfers-spiegel.js): op een toestel zonder kasboek, facturen of loonmodule (staff) de cijfers van de Kissing Karrots Server,
      met dezelfde totalen maar zonder lonen per persoon. Alleen lezen: bewaren gebeurt op een toestel van management. */
   var SPIEGELKEY = 'kosmo-cijfers-v1';
   function _spiegelDeel(deel) { try { var o = JSON.parse(localStorage.getItem(SPIEGELKEY) || 'null'); return o && Array.isArray(o[deel]) ? o[deel] : null; } catch (e) { return null; } }
@@ -1971,7 +1971,7 @@
       var e = r.entry;
       if (e.excluded) { r.status = 'uitgesloten'; r.factor = 0; r.reason = 'door jou uitgesloten'; return; }
       if (e.superseded) { r.status = 'overlap'; r.factor = 0; r.reason = String(e.superseded); return; }
-      if (e.spiegel) return; // uit de cijferspiegel: de centrale pc verrekende de overlap met facturen al
+      if (e.spiegel) return; // uit de cijferspiegel: de Kissing Karrots Server verrekende de overlap met facturen al
       if (e.kind === 'raming') {
         var repay = /afbetaling/.test(e.note || '') && !/microlease/i.test(e.label);
         var near = repay ? [] : docs.filter(function (d) { return d.date >= '2026-05-01' && Math.abs(_monthDiff(d.month, e.month)) <= 1 && _sameParty(e.label, d.sup); });

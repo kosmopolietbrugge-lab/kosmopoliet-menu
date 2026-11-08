@@ -539,6 +539,7 @@
       'Data-laag niet geladen': 'Data layer not loaded', 'De kaart is nog leeg': 'The menu is still empty',
       'Deze kaart is enkel om in te kijken. Bestellen kan ter plaatse, aan tafel': 'This menu is for viewing only. You can order on site, at your table',
       'Prijzen in euro, inclusief btw · Allergenen? Vraag het aan de bediening': 'Prices in euros, including VAT · Allergens? Ask the staff',
+      'Kissing Karrots Server · Powered by Tabula Rasa': 'Kissing Karrots Server · Powered by Tabula Rasa',
       'Google Translate — meer talen (internet': 'Google Translate — more languages (internet', 'bv': 'e.g', 'Taal / Language': 'Language', 'Google Translate': 'Google Translate'
     },
     pt: {
@@ -550,6 +551,7 @@
       'Data-laag niet geladen': 'Camada de dados não carregada', 'De kaart is nog leeg': 'O cardápio ainda está vazio',
       'Deze kaart is enkel om in te kijken. Bestellen kan ter plaatse, aan tafel': 'Este cardápio é apenas para consulta. Pode pedir no local, à mesa',
       'Prijzen in euro, inclusief btw · Allergenen? Vraag het aan de bediening': 'Preços em euros, com IVA incluído · Alérgenos? Pergunte à equipe',
+      'Kissing Karrots Server · Powered by Tabula Rasa': 'Kissing Karrots Server · Powered by Tabula Rasa',
       'Google Translate — meer talen (internet': 'Google Translate — mais idiomas (internet', 'bv': 'ex', 'Google Translate': 'Google Translate', 'Taal / Language': 'Idioma / Language'
     },
     ne: {
@@ -561,6 +563,7 @@
       'Data-laag niet geladen': 'डाटा तह लोड भएन', 'De kaart is nog leeg': 'मेनु अझै खाली छ',
       'Deze kaart is enkel om in te kijken. Bestellen kan ter plaatse, aan tafel': 'यो मेनु हेर्नका लागि मात्र हो। अर्डर ठाउँमै, टेबलमा गर्न सकिन्छ',
       'Prijzen in euro, inclusief btw · Allergenen? Vraag het aan de bediening': 'मूल्य यूरोमा, भ्याट सहित · एलर्जेन? कर्मचारीलाई सोध्नुहोस्',
+      'Kissing Karrots Server · Powered by Tabula Rasa': 'Kissing Karrots Server · Powered by Tabula Rasa',
       'Google Translate — meer talen (internet': 'Google Translate — थप भाषा (इन्टरनेट', 'bv': 'जस्तै', 'Google Translate': 'Google Translate'
     },
     fr: {
@@ -572,6 +575,7 @@
       'Data-laag niet geladen': 'Couche de données non chargée', 'De kaart is nog leeg': 'La carte est encore vide',
       'Deze kaart is enkel om in te kijken. Bestellen kan ter plaatse, aan tafel': 'Cette carte est à consulter uniquement. Vous pouvez commander sur place, à table',
       'Prijzen in euro, inclusief btw · Allergenen? Vraag het aan de bediening': 'Prix en euros, TVA comprise · Allergènes ? Demandez au personnel',
+      'Kissing Karrots Server · Powered by Tabula Rasa': 'Kissing Karrots Server · Powered by Tabula Rasa',
       'Google Translate — meer talen (internet': 'Google Translate — plus de langues (internet', 'bv': 'p. ex', 'Google Translate': 'Google Translate'
     },
     de: {
@@ -583,6 +587,7 @@
       'Data-laag niet geladen': 'Datenschicht nicht geladen', 'De kaart is nog leeg': 'Die Karte ist noch leer',
       'Deze kaart is enkel om in te kijken. Bestellen kan ter plaatse, aan tafel': 'Diese Karte dient nur zur Ansicht. Bestellen können Sie vor Ort am Tisch',
       'Prijzen in euro, inclusief btw · Allergenen? Vraag het aan de bediening': 'Preise in Euro, inkl. MwSt. · Allergene? Fragen Sie das Personal',
+      'Kissing Karrots Server · Powered by Tabula Rasa': 'Kissing Karrots Server · Powered by Tabula Rasa',
       'Google Translate — meer talen (internet': 'Google Translate — weitere Sprachen (Internet', 'bv': 'z. B', 'Google Translate': 'Google Translate'
     },
     es: {
@@ -594,6 +599,7 @@
       'Data-laag niet geladen': 'Capa de datos no cargada', 'De kaart is nog leeg': 'La carta aún está vacía',
       'Deze kaart is enkel om in te kijken. Bestellen kan ter plaatse, aan tafel': 'Esta carta es solo para consultar. Puedes pedir en el local, en la mesa',
       'Prijzen in euro, inclusief btw · Allergenen? Vraag het aan de bediening': 'Precios en euros, IVA incluido · ¿Alérgenos? Pregunta al personal',
+      'Kissing Karrots Server · Powered by Tabula Rasa': 'Kissing Karrots Server · Powered by Tabula Rasa',
       'Google Translate — meer talen (internet': 'Google Translate — más idiomas (internet', 'bv': 'p. ej', 'Google Translate': 'Google Translate'
     }
   };

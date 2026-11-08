@@ -70,3 +70,4 @@ body.scrol .r-foot{ margin-top:1em; }
   .sheet::before{ display:none; }
   .r-it .n, .r-baseline, .r-title h1, .r-cat h2, .r-it .p{ color:#000; } .r-it em, .r-foot{ color:#444; }
 }
+.r-credit{ display:block; margin-top:.35em; font-size:.85em; opacity:.75; }
