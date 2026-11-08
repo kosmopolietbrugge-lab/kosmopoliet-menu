@@ -1042,24 +1042,37 @@
   // Eén dag uit het inkomstenoverzicht als afrekening: per btw-tarief één regel (btw-bedrag volgens het overzicht); het netto-totaal van
   // de dag blijft exact wat in het overzicht staat. Netto dat niet door een btw-rij gedekt is (ontbrekende rij), krijgt 12 % (voeding)
   // of 21 % (dranken); is er meer btw-gedekt netto dan het dagtotaal, dan worden de regels evenredig verkleind.
-  function _incomePayment(d) {
-    if (!(d.net > 0)) return null;
-    var base = Object.keys(d.btw || {}).filter(function (r) { return Number(d.btw[r]) > 0 && Number(r) > 0; }).map(function (r) { return { r: Number(r), n: d.btw[r] / (Number(r) / 100) }; });
+  // Verdeling van één omzetdag over de btw-tarieven: [{ r, n (netto), v (btw) }]. Sinds v0.107.0 geldt altijd: som netto = netto van de
+  // dag (op de cent), som btw = de btw zoals in de lijst. Dus bruto = netto + btw, in elk scherm (rapporten, boekhouding, btw-aangifte).
+  // Voordien rekende elk tarief "btw ÷ tarief" en week het netto per dag enkele centen af, en het bruto in de boekhouding enkele euro.
+  function _incomeSplit(d) {
+    if (!d || !(d.net > 0)) return [];
+    var base = Object.keys(d.btw || {}).filter(function (r) { return Number(d.btw[r]) > 0 && Number(r) > 0; }).map(function (r) { return { r: Number(r), n: d.btw[r] / (Number(r) / 100), v: Number(d.btw[r]) }; });
     var sum = base.reduce(function (t, x) { return t + x.n; }, 0), resid = d.net - sum;
     if (resid > 0.05) {
       // het ontbrekende netto verdelen over drank (21 %) en eten (12 %), naar wat het overzicht per groep zegt
       var n21 = base.filter(function (x) { return x.r === 21; }).reduce(function (t, x) { return t + x.n; }, 0), nFood = sum - n21;
       var gapD = Math.max(0, (d.netDrink || 0) - n21), gapF = Math.max(0, (d.netFood || 0) - nFood), gt = gapD + gapF;
       var addD = gt > 0 ? resid * gapD / gt : 0, addF = resid - addD;
-      var put = function (rate, n) { if (!(n > 0.005)) return; var hit = base.filter(function (x) { return x.r === rate; })[0]; if (hit) hit.n += n; else base.push({ r: rate, n: n }); };
+      var put = function (rate, n) { if (!(n > 0.005)) return; var hit = base.filter(function (x) { return x.r === rate; })[0]; if (hit) hit.n += n; else base.push({ r: rate, n: n, v: 0 }); };
       put(21, addD); put(12, addF);
-    } else if (resid < -0.05 && sum > 0) { var k = d.net / sum; base.forEach(function (x) { x.n *= k; }); }
-    var lines = [], gross = 0, net = 0;
-    base.forEach(function (x) {
-      var g = x.n * (1 + x.r / 100); gross += g; net += x.n;
+    }
+    sum = base.reduce(function (t, x) { return t + x.n; }, 0);
+    if (!base.length) base.push({ r: 12, n: d.net, v: 0 });
+    else if (sum > 0) { var k = d.net / sum; base.forEach(function (x) { x.n = round2(x.n * k); }); }
+    // afrondingsrest (centen) op het grootste deel, zodat de som exact het netto van de dag is
+    var rest = round2(d.net - base.reduce(function (t, x) { return t + x.n; }, 0));
+    if (rest) { var big = base.slice().sort(function (a, b) { return b.n - a.n; })[0]; big.n = round2(big.n + rest); }
+    return base;
+  }
+  function _incomePayment(d) {
+    var split = _incomeSplit(d); if (!split.length) return null;
+    var lines = [], gross = 0, net = 0, vat = 0;
+    split.forEach(function (x) {
+      var g = x.n + x.v; gross += g; net += x.n; vat += x.v;
       lines.push({ itemId: null, name: (x.r === 21 ? 'Dranken ' : 'Voeding ') + x.r + '%', qty: 1, price: g, vatRate: x.r, dest: x.r === 21 ? 'bar' : 'kitchen' });
     });
-    return { id: 'inc-' + d.date, at: new Date(d.date + 'T12:00:00').getTime(), method: 'inkomstenoverzicht', synthetic: true, sessionId: 'inc-' + d.date, persons: d.klanten || 0, lines: lines, gross: round2(gross), net: round2(net), vat: round2(gross - net) };
+    return { id: 'inc-' + d.date, at: new Date(d.date + 'T12:00:00').getTime(), method: 'inkomstenoverzicht', synthetic: true, sessionId: 'inc-' + d.date, persons: d.klanten || 0, lines: lines, gross: round2(gross), net: round2(net), vat: round2(vat) };
   }
   function dayReport(dateStr) { return computeReport(paymentsInRange(dateStr, dateStr)); }
   function rangeReport(startStr, endStr) { return computeReport(paymentsInRange(startStr, endStr)); }
@@ -2186,10 +2199,14 @@
       if (from && d.date < from) return; if (to && d.date > to) return;
       if (pos[d.date]) { o.overlapDays++; return; }
       o.days++; o.net += d.net || 0; o.food += d.netFood || 0; o.drink += d.netDrink || 0; o.covers += d.klanten || 0; if (d.flags && d.flags.length) o.flagged++;
-      Object.keys(d.btw || {}).forEach(function (r) {
-        var v = d.btw[r], n = v / (Number(r) / 100), b = o.byRate[r] || (o.byRate[r] = { gross: 0, net: 0, vat: 0 });
-        b.vat += v; b.net += n; b.gross += n + v; o.vat += v;
+      // Zelfde verdeling als de rapporten (v0.107.0): netto per tarief telt op tot het netto van de dag, btw zoals in de lijst.
+      var split = _incomeSplit(d), btwGedekt = {};
+      split.forEach(function (x) {
+        var b = o.byRate[x.r] || (o.byRate[x.r] = { gross: 0, net: 0, vat: 0 });
+        b.vat += x.v; b.net += x.n; b.gross += x.n + x.v; o.vat += x.v; btwGedekt[x.r] = 1;
       });
+      // btw zonder netto (dag zonder omzet maar met een btw-bedrag): telt nog mee als btw
+      Object.keys(d.btw || {}).forEach(function (r) { var v = Number(d.btw[r]) || 0; if (!v || btwGedekt[Number(r)] || split.length) return; var b = o.byRate[r] || (o.byRate[r] = { gross: 0, net: 0, vat: 0 }); b.vat += v; b.gross += v; o.vat += v; });
     });
     ['net', 'vat', 'food', 'drink'].forEach(function (k) { o[k] = round2(o[k]); });
     Object.keys(o.byRate).forEach(function (r) { var b = o.byRate[r]; b.vat = round2(b.vat); b.net = round2(b.net); b.gross = round2(b.gross); });
