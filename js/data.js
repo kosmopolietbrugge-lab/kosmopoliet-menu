@@ -2108,6 +2108,14 @@
   }
   function removeRepayPlan(creditor) { var rep = loadRepay(), k = _lnorm(creditor); rep.plans = rep.plans.filter(function (x) { return _lnorm(x.creditor) !== k; }); saveRepay(rep); }
   function _posDaySet() { var s = {}; _kassaBetalingen().forEach(function (p) { s[businessDate(p.at)] = 1; }); return s; }
+  // Btw-controle per omzetdag (v0.104.9): uit de btw per tarief volgt het bedrag excl. btw (btw ÷ tarief). Dat moet het netto
+  // van de dag zijn. Wijkt het meer af dan € 5 of 0,5 %, dan staat de btw allicht onder het verkeerde tarief (6/12/21 %).
+  function btwTariefAfwijking(d) {
+    var ks = Object.keys((d && d.btw) || {}).filter(function (r) { return Number(d.btw[r]) && Number(r) > 0; });
+    if (!ks.length || !d.net) return null;
+    var basis = ks.reduce(function (s, r) { return s + Number(d.btw[r]) / (Number(r) / 100); }, 0), verschil = round2(basis - d.net);
+    return Math.abs(verschil) > Math.max(5, d.net * 0.005) ? { basis: round2(basis), net: d.net, verschil: verschil } : null;
+  }
   function incomeSummary(from, to) {
     var inc = loadIncome(), pos = _posDaySet();
     var o = { net: 0, vat: 0, food: 0, drink: 0, covers: 0, days: 0, overlapDays: 0, flagged: 0, byRate: {} };
@@ -3166,7 +3174,7 @@
     getAlias, getAliasPack, setAlias, getLineCat, setLineCat, SPEND_CATS, matchDocuments,
     getSpendCats, getSpendCatDefs, spendCatDef, spendCatIsFnb, addSpendCat, updateSpendCat, removeSpendCat,
     docArticles, applyMappingsToDocs, spendByCategory,
-    getKassaVanaf, setKassaVanaf, kassaTeltOp, kassaGenegeerd, getActiveDocuments, spendCoverage, assetRegister, depreciation, lastRevenueDate, monthlyRevenue, breakEven, getIncome, importIncome, incomeSummary, financeReport, ledgerVatIn, vatReturn, getLedger, importLedger, updateLedgerEntry, setLedgerCell, vatPaidSummary, getRepayments, addRepayPlan, updateRepayPlan, removeRepayPlan, ledgerStatus, ledgerSpend, ledgerSummary, getDocInbox, setInboxStatus, matchSupplier, docFieldsFromExtraction, findDuplicateDoc, findDocIssues, markDuplicateDocs, getDocumentArchive,
+    getKassaVanaf, setKassaVanaf, kassaTeltOp, kassaGenegeerd, getActiveDocuments, spendCoverage, assetRegister, depreciation, lastRevenueDate, monthlyRevenue, breakEven, getIncome, importIncome, incomeSummary, btwTariefAfwijking, financeReport, ledgerVatIn, vatReturn, getLedger, importLedger, updateLedgerEntry, setLedgerCell, vatPaidSummary, getRepayments, addRepayPlan, updateRepayPlan, removeRepayPlan, ledgerStatus, ledgerSpend, ledgerSummary, getDocInbox, setInboxStatus, matchSupplier, docFieldsFromExtraction, findDuplicateDoc, findDocIssues, markDuplicateDocs, getDocumentArchive,
     getDocSettings, setDocSettings, retentionDate, isSummaryInvoice, suggestLevernotas, compareTotals, linkLevernotas,
     getBizModel, updateBizGroup, addBizGroup, removeBizGroup, costGroupsReport, moveBizCategory, moveBizGroup, removeBizGroupInto, renameLedgerPost, moveLedgerPost, businessModelReport, fnbSalesCost,
     purchaseVatFor, docLineVat, inputVatSummary,
