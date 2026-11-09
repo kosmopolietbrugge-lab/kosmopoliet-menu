@@ -1172,7 +1172,27 @@
       }
       return out;
     });
-    if (!items.length) return { items: [], medianQty: 0, medianUnit: 0 };
+    var bron = 'kassa', mixDagen = 0;
+    // Nog geen verkopen per gerecht (de kassa is niet gekoppeld)? Dan de aantallen uit Mix-marge (kosmo-mix-v1: geschat of
+    // ingevoerd over mix.days dagen), omgerekend naar deze periode. Duidelijk een schatting (bron: 'schatting').
+    if (!items.length && F && F.db && F.calcKaart) {
+      var mix = null; try { mix = JSON.parse(localStorage.getItem('kosmo-mix-v1') || 'null'); } catch (e) {}
+      if (mix && mix.qty) {
+        mixDagen = Number(mix.days) || 0;
+        var span = Math.max(1, Math.round((Date.parse(endStr + 'T12:00:00') - Date.parse(startStr + 'T12:00:00')) / 864e5) + 1), fac = mixDagen > 0 ? span / mixDagen : 1;
+        (F.db().kaartRecipes || []).forEach(function (kr) {
+          var q = Number(mix.qty[kr.id]); if (!(q > 0) || kr.archived) return;
+          var ids = Object.keys(kr.menuItemIds || {}).map(function (c) { return kr.menuItemIds[c]; }).concat(kr.menuItemId ? [kr.menuItemId] : []);
+          var it = null; for (var i = 0; i < ids.length && !it; i++) { var x = getItem(ids[i]); if (x && !x.archived) it = x; }
+          if (!it) return;
+          var qty = Math.round(q * fac), unit = round2(effectivePrice(it)), r = F.calcKaart(kr);
+          var unitExcl = unit / (1 + (r.vat || 0) / 100), fc = r.totalFoodcostPerPortion || r.foodcostPerPortion || 0, dc = r.directCostPerPortion != null ? r.directCostPerPortion : fc;
+          items.push({ itemId: it.id, name: it.name, dest: destForItem(it.id), qty: qty, gross: round2(qty * unit), unit: unit, costKnown: true, marginUnit: round2(unitExcl - dc), foodcostPct: unitExcl > 0 ? round2(fc / unitExcl * 100) : 0 });
+        });
+        if (items.length) bron = 'schatting';
+      }
+    }
+    if (!items.length) return { items: [], medianQty: 0, medianUnit: 0, bron: bron };
     var mq = _median(items.map(function (x) { return x.qty; }));
     var mu = _median(items.map(function (x) { return x.costKnown ? x.marginUnit : x.unit; }));
     items.forEach(function (it) {
@@ -1181,7 +1201,7 @@
       it.cls = pop && high ? 'star' : (pop && !high ? 'workhorse' : (!pop && high ? 'puzzle' : 'dog'));
     });
     items.sort(function (a, b) { return b.gross - a.gross; });
-    return { items: items, medianQty: mq, medianUnit: round2(mu) };
+    return { items: items, medianQty: mq, medianUnit: round2(mu), bron: bron, mixDagen: mixDagen };
   }
   // Omzetgewogen mix-marge per bron (eten/drank), enkel over verkopen met een
   // gekende kostprijs (recept gekoppeld) - plus welk deel van de omzet dat
