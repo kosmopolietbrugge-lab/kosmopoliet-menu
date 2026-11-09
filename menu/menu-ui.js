@@ -273,3 +273,53 @@
   UI.algBestelling = function () { return (aan() && st.bon) ? { soort: st.soort, lijst: st.lijst.slice(), subs: JSON.parse(JSON.stringify(st.subs)) } : null; };
   UI.ALLERGEEN_SUB = SUBS;
 })();
+
+/* ============================================================
+   Delen — gedeeld door menu.html (met bestellen) en website-menu.html (enkel kijken).
+   Elk gerecht krijgt een deelknop. De link wijst altijd naar de publieke kaart op de website (geen tafelnummer,
+   geen bestelknop), zodat wie hem krijgt het gerecht meteen open ziet, waar hij ook is: ...?item=<id>.
+   Op de telefoon opent het deelmenu van het toestel (WhatsApp, Messenger, mail...); anders wordt de link gekopieerd.
+   ============================================================ */
+(function () {
+  'use strict';
+  var UI = window.KosmoMenuUI; if (!UI) return;
+  var PUBLIEK = 'https://kosmopolietbrugge-lab.github.io/kosmopoliet-menu/';
+  var ICOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.3 10.8l7.4-4.4M8.3 13.2l7.4 4.4"/></svg>';
+  function vt(s) { try { return window.I18N && I18N.getLang && I18N.getLang() !== 'nl' ? I18N.vertaal(I18N.getLang(), s) : s; } catch (e) { return s; } }
+  function toast(s) { var t = document.getElementById('toast'); if (!t) return; t.textContent = vt(s); t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(function () { t.classList.remove('show'); }, 2200); }
+  // Staat deze pagina zelf op de website, dan die map; anders (QR-kaart in de zaak) het vaste webadres.
+  function basis() { return /\.github\.io$/i.test(location.hostname) ? location.origin + location.pathname.replace(/[^/]*$/, '') : PUBLIEK; }
+  function link(it) { return basis() + '?item=' + encodeURIComponent(it.id); }
+  function kopieer(url) {
+    function handmatig() { try { window.prompt('Kopieer deze link', url); } catch (e) {} }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(function () { toast('Link gekopieerd'); }, handmatig);
+    else handmatig();
+  }
+  function deel(it) {
+    var url = link(it), naam = String(it.name || ''), wie = '';
+    try { wie = (window.KosmoData && KosmoData.getVisual().name) || ''; } catch (e) {}
+    var titel = naam + (wie ? ' · ' + wie : '');
+    if (navigator.share) {
+      navigator.share({ title: titel, text: titel + (it.short ? ' — ' + it.short : ''), url: url }).catch(function (e) { if (!e || e.name !== 'AbortError') kopieer(url); });
+    } else kopieer(url);
+  }
+  // Een knop die het gerecht deelt; groot = de versie onderaan het detailscherm.
+  function knop(it, groot) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'deel-btn' + (groot ? ' groot' : '');
+    b.setAttribute('aria-label', 'Delen'); b.setAttribute('title', 'Delen');
+    b.innerHTML = ICOON;
+    b.addEventListener('click', function (e) { e.stopPropagation(); e.preventDefault(); deel(it); });
+    return b;
+  }
+  // Het gerecht uit een gedeelde link (?item=...), als het nu op de kaart staat: { item, cat } of null.
+  function uitLink(D) {
+    var id = null; try { id = new URLSearchParams(location.search).get('item'); } catch (e) {}
+    if (!id) return null;
+    var it = D.getItem(id), cats = UI.cats(D), cat = null;
+    if (it && it.available !== false && !it.archived) cat = cats.filter(function (c) { return UI.items(D, c).some(function (x) { return x.id === id; }); })[0] || null;
+    if (!cat) { toast('Dit gerecht staat nu niet op de kaart'); return null; }
+    return { item: it, cat: cat };
+  }
+  UI.deel = deel; UI.deelKnop = knop; UI.deelLink = link; UI.uitLink = uitLink;
+})();

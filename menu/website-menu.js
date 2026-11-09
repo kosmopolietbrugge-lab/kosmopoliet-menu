@@ -70,6 +70,7 @@
     var info = el('div', 'info',
       '<h3>' + esc(it.name) + '</h3><p>' + esc(it.short) + '</p>' +
       '<div class="foot">' + priceHtml(it, 'price') + '</div>');
+    info.querySelector('.foot').appendChild(KosmoMenuUI.deelKnop(it));
     img.addEventListener('click', function () { openDetail(it.id); });
     info.addEventListener('click', function () { openDetail(it.id); });
     card.appendChild(img); card.appendChild(info);
@@ -86,6 +87,7 @@
       (it.extra ? '<div class="detail-extra">' + esc(it.extra) + '</div>' : '') +
       '<p class="block-title">Allergenen</p>' + KosmoMenuUI.algBlok(it);
     $('#detail-foot').innerHTML = priceHtml(it, 'detail-price');
+    $('#detail-foot').appendChild(KosmoMenuUI.deelKnop(it, true));
     openSheet('detail');
   }
 
@@ -140,6 +142,9 @@
     gastReady.then(function () {
       D.ready(function () {
         renderMenu(); watchPromos(renderMenu);
+        // Gedeelde link (?item=...): meteen naar dat gerecht.
+        var gedeeld = KosmoMenuUI.uitLink(D);
+        if (gedeeld) { state.activeCat = gedeeld.cat.id; renderMenu(); openDetail(gedeeld.item.id); }
         D.subscribe(function (kind) { if (kind === 'data') renderMenu(); });
       });
     });
