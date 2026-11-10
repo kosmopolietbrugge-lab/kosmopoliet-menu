@@ -32,7 +32,7 @@
   const DEFAULT_CLEARANCE = {
     'mod::menu': 'staff', 'mod::business': 'staff', 'mod::marketing': 'staff', 'mod::housekeeping': 'staff', 'mod::settings': 'staff',
     // KosmoKrew
-    'kosmokrew::Teamleden': 'management', 'kosmokrew::Beschikbaarheid': 'staff', 'kosmokrew::Roosters maken': 'management',
+    'kosmokrew::Teamleden': 'management', 'kosmokrew::Beschikbaarheid': 'help', 'kosmokrew::Roosters maken': 'management',
     // Keuken
     'keuken::Items en categorieen keuken': 'staff', 'keuken::Bestellingen en voorraad keuken': 'staff', 'keuken::Verspilling': 'staff',
     // Bar/zaal
