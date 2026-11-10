@@ -32,7 +32,7 @@
   const DEFAULT_CLEARANCE = {
     'mod::menu': 'staff', 'mod::business': 'staff', 'mod::marketing': 'staff', 'mod::housekeeping': 'staff', 'mod::settings': 'staff',
     // KosmoKrew
-    'kosmokrew::Teamleden': 'management', 'kosmokrew::Beschikbaarheid': 'staff',
+    'kosmokrew::Teamleden': 'management', 'kosmokrew::Beschikbaarheid': 'staff', 'kosmokrew::Roosters maken': 'management',
     // Keuken
     'keuken::Items en categorieen keuken': 'staff', 'keuken::Bestellingen en voorraad keuken': 'staff', 'keuken::Verspilling': 'staff',
     // Bar/zaal
@@ -1552,8 +1552,7 @@
   function removeTeamPost(id) { return api('DELETE', '/crew/inbox/' + encodeURIComponent(id)).then(loadTeamPost); }
 
   /* ---------- Extra uren (buiten het rooster) (v0.61.0) ----------
-     Zolang er geen echt roostersysteem is (Roosters staat nog als "Binnenkort"),
-     is dit de enige bron van "gewerkte uren" die staff/help zelf kunnen inzien.
+     Uren buiten het rooster (KosmoKrew › Roosters, v0.113.0): wat iemand extra werkte, zelf ingegeven.
      Elke invoer meldt zichzelf automatisch bij de to-do van management. */
   var EXTRAKEY = 'kosmo-extrauren-v1';
   function loadExtraHours() { try { return JSON.parse(localStorage.getItem(EXTRAKEY) || '[]'); } catch (e) { return []; } }
