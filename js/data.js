@@ -837,7 +837,42 @@
     label = String(label); if (list.indexOf(label) < 0) { list.push(label); saveTables(list); }
     return label;
   }
-  function removeTable(label) { saveTables(loadTables().filter(function (x) { return x !== String(label); })); }
+  function removeTable(label) {
+    label = String(label);
+    saveTables(loadTables().filter(function (x) { return x !== label; }));
+    _tableRefs(label, null);
+  }
+  // Alle plaatsen in de gedeelde instellingen die een tafel bij naam noemen (v0.111.0).
+  // Hernoemen (nieuw = naam) of verwijderen (nieuw = null) werkt ze allemaal in één keer bij. Tot nu
+  // bleven toekenningsregels, samenvoegbare reeksen, niet-reserveerbaar, kostenplaats en de
+  // tafelactivatie op de oude naam staan: tafel 24 werd "24 M", maar de regel voor grote groepen zocht nog "24".
+  function _tableRefs(oldL, newL) {
+    var st = getResvSettings(), patch = {};
+    function swapList(list) { var out = [], seen = {}; (list || []).forEach(function (x) { x = String(x); var y = x === oldL ? newL : x; if (y != null && !seen[y]) { seen[y] = 1; out.push(y); } }); return out; }
+    ['tableSeats', 'tableSeatsMax', 'tableZones', 'tablePos', 'tableCostType'].forEach(function (k) {
+      var m = st[k] || {}; if (m[oldL] == null) return;
+      var mm = Object.assign({}, m); if (newL != null && mm[newL] == null) mm[newL] = mm[oldL]; delete mm[oldL]; patch[k] = mm;
+    });
+    ['freeTables', 'noReserve'].forEach(function (k) { if ((st[k] || []).map(String).indexOf(oldL) >= 0) patch[k] = swapList(st[k]); });
+    if ((st.tableGroups || []).some(function (g) { return g.map(String).indexOf(oldL) >= 0; })) patch.tableGroups = st.tableGroups.map(swapList).filter(function (g) { return g.length > 1; });
+    if ((st.assignRules || []).some(function (r) { return (r.order || []).map(String).indexOf(oldL) >= 0; })) patch.assignRules = st.assignRules.map(function (r) { return Object.assign({}, r, { order: swapList(r.order) }); });
+    if (Object.keys(patch).length) saveResvSettings(patch);
+    var a = loadActive(); if (a[oldL] != null) { if (newL != null) a[newL] = a[oldL]; delete a[oldL]; saveActive(a); }
+  }
+  // Tafelnamen in de instellingen die niet (meer) in het tafelrooster staan, en reserveerbare tafels zonder toekenningsregel.
+  function tableConfigIssues() {
+    var st = getResvSettings(), tabs = loadTables(), has = {}; tabs.forEach(function (t) { has[t] = 1; });
+    var unknown = {};
+    function chk(t) { t = String(t); if (!has[t]) unknown[t] = 1; }
+    (st.assignRules || []).forEach(function (r) { (r.order || []).forEach(chk); });
+    (st.tableGroups || []).forEach(function (g) { g.forEach(chk); });
+    (st.noReserve || []).forEach(chk);
+    var inRule = {}; (st.assignRules || []).forEach(function (r) { (r.order || []).forEach(function (t) { inRule[String(t)] = 1; }); });
+    var noRule = (st.assignRules || []).length ? tabs.filter(function (t) { return !inRule[t] && isReservable(t); }) : [];
+    return { unknown: Object.keys(unknown), noRule: noRule };
+  }
+  // som van de gewone zitplaatsen van alle reserveerbare tafels (ter vergelijking met de ingestelde capaciteit)
+  function reservableSeats() { return loadTables().filter(isReservable).reduce(function (s2, t) { return s2 + tableSeatsOf(t); }, 0); }
   // Gratis tafel: rekeningen komen op €0 (tafel 0 = personeel, elke tafel met 'crew' in de naam, of expliciet in freeTables).
   function isFreeTable(t) {
     t = String(t); if (t === '0') return true; if (/crew/i.test(t)) return true;
@@ -849,13 +884,10 @@
     if (!newL || oldL === newL) return false;
     var list = loadTables(); var i = list.indexOf(oldL); if (i < 0) return false;
     if (list.indexOf(newL) >= 0) return false; // bestaat al
+    if (_openOrders(oldL).length) return false; // in gebruik: eerst afrekenen of verplaatsen (Service > tafel > Verplaats)
     list[i] = newL; saveTables(list);
-    var st = getResvSettings(), patch = {};
-    ['tableSeats', 'tableSeatsMax', 'tableZones', 'tablePos'].forEach(function (k) {
-      var m = st[k] || {}; if (m[oldL] != null) { var mm = Object.assign({}, m); mm[newL] = mm[oldL]; delete mm[oldL]; patch[k] = mm; }
-    });
-    if ((st.freeTables || []).indexOf(oldL) >= 0) patch.freeTables = st.freeTables.map(function (x) { return x === oldL ? newL : x; });
-    if (Object.keys(patch).length) saveResvSettings(patch);
+    _tableRefs(oldL, newL);
+    var lk = getTableLink(oldL); if (lk) { setTableLink(newL, lk); clearTableLink(oldL); }
     var rs = loadResv(), ch = false;
     rs.forEach(function (r) { if (r.tableIds && r.tableIds.map(String).indexOf(oldL) >= 0) { r.tableIds = r.tableIds.map(function (x) { return String(x) === oldL ? newL : x; }); ch = true; } });
     if (ch) saveResv(rs);
@@ -1278,6 +1310,8 @@
     var rep = computeReport(getDayPayments()); rep.date = businessDate(Date.now()); rep.savedAt = Date.now();
     var reps = getReports().filter(function (r) { return r.date !== rep.date; }); reps.push(rep); saveReports(reps);
     try { if (kassaTeltOp(rep.date) && typeof window !== 'undefined' && window.KosmoVoorbereiding) window.KosmoVoorbereiding.boekZ(rep); } catch (e) {}
+    // dag dicht = geactiveerde tafels zonder openstaande bestelling weer vrij (v0.111.0)
+    try { var a = loadActive(), ch = false; Object.keys(a).forEach(function (t) { if (t !== '0' && !_openOrders(t).length) { delete a[t]; ch = true; } }); if (ch) saveActive(a); } catch (e) {}
     return rep;
   }
   // gesloten sessies van vandaag (een tafelnummer kan meermaals voorkomen)
@@ -3123,7 +3157,19 @@
   }
   function saveActive(obj) { try { localStorage.setItem(AKEY, JSON.stringify(obj)); } catch (e) {} broadcast('tables'); }
   function _activated() { return loadActive(); }
-  function isTableActive(t) { t = String(t); if (t === '0') return true; return !!_activated()[t]; }
+  // Een activatie geldt voor één werkdag (v0.111.0). Tot dan bleef een tafel die ooit geactiveerd werd
+  // maar nooit afgerekend of afgesloten (testbestelling gewist, gasten weg zonder bestelling) wekenlang
+  // als "bezet" in Service staan. Van een vorige werkdag en zonder openstaande bestelling = niet meer actief.
+  function _activationStale(t, ms) { return !ms || (businessDate(ms) !== businessDate(Date.now()) && _openOrders(t).length === 0); }
+  function isTableActive(t) { t = String(t); if (t === '0') return true; var ms = _activated()[t]; return !!ms && !_activationStale(t, ms); }
+  // ruimt verlopen activaties ook echt op (één schrijfbeurt, enkel als er iets te ruimen valt)
+  function pruneStaleActivations() {
+    var a = loadActive(), weg = [];
+    Object.keys(a).forEach(function (t) { if (t !== '0' && _activationStale(t, a[t])) weg.push(t); });
+    if (!weg.length) return [];
+    weg.forEach(function (t) { delete a[t]; }); saveActive(a);
+    return weg;
+  }
   function activateTable(t) { t = String(t); var a = loadActive(); if (!a[t]) { a[t] = Date.now(); saveActive(a); } return true; }
   function deactivateTable(t) { t = String(t); var a = loadActive(); if (a[t]) { delete a[t]; saveActive(a); } return true; }
   // een tafel is "in gebruik" als ze geactiveerd is OF openstaande bestellingen heeft
@@ -3263,7 +3309,7 @@
     getProfile,
     getTodos, addTodo, dismissTodo,
     getExtraHours, addExtraHours, removeExtraHours, extraHoursSum,
-    getTables, addTable, removeTable, removeHighestTable, renameTable, isFreeTable,
+    getTables, addTable, removeTable, removeHighestTable, renameTable, tableConfigIssues, reservableSeats, isFreeTable,
     setCourseProgress, serveBar, getTableCourses,
     reopenLine, restoreCourse, restoreBar, restoreTable,
     getChat, addChat, clearChat, getAskBill, setAskBill, requestBill, getBillRequests, hasBillRequest, clearBillRequest, getStdMessages, addStdMessage, removeStdMessage,
@@ -3289,7 +3335,7 @@
     getTableLink, setTableLink, clearTableLink, seatReservation, getFloorPlan, getUpcomingArrivals,
     getTableCfg, tableSeatsOf, tableSeatsMaxOf, tableGroupOf, tableZoneOf, tablePosOf, seatingDuration,
     isReservable, autoAssignTable,
-    isTableActive, activateTable, deactivateTable, isTableInUse,
+    isTableActive, activateTable, deactivateTable, isTableInUse, pruneStaleActivations,
     getTableReservations, getTableShifts, moveTable, getTableMovedFrom, walkinFreeTables, walkinCapacity,
     reset, DEFAULTS,
   };
