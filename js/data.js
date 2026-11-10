@@ -1426,7 +1426,7 @@
   const ROLE_RANK = { help: 1, staff: 2, management: 3 };
   function roleRank(r) { return ROLE_RANK[r] || 1; }
   // Hernoemde tegels behouden hun eerder ingestelde toegangsniveau (sleutel = module::tegelnaam).
-  const LEGACY_TILE_KEYS = { 'menu::Recepten': 'menu::F&B rekenmodule', 'menu::F&B cost analyse': 'menu::Foodcost' };
+  const LEGACY_TILE_KEYS = { 'menu::Recepten': 'menu::F&B rekenmodule', 'menu::F&B cost analyse': 'menu::Foodcost', 'keuken::Voorbereidende fiche': 'keuken::Voorbereiding' };
   function _clearanceIngesteld(key) { var d = load(); if (d.clearance && d.clearance[key]) return d.clearance[key]; var old = LEGACY_TILE_KEYS[key]; if (old && d.clearance && d.clearance[old]) return d.clearance[old]; return DEFAULT_CLEARANCE[key] || 'help'; }
   // Tegels die afgeschermde gegevens tonen of bewerken (js/db-toegang.js), kunnen niet lager staan. Rapporten (omzet, btw, balans,
   // bedrijfsmodel, KPI, cashflow, rentabiliteit) werken voor staff met de cijferspiegel en zijn vrij in te stellen.
@@ -1539,6 +1539,17 @@
   function getTodos() { return loadTodos().slice().sort(function (a, b) { return (b.at || 0) - (a.at || 0); }); }
   function addTodo(name, message) { var list = loadTodos(); list.push({ id: uid('td'), name: name, message: message, at: Date.now() }); saveTodos(list); return list; }
   function dismissTodo(id) { saveTodos(loadTodos().filter(function (t) { return t.id !== id; })); }
+  /* ---------- To-do's en berichten per persoon (v0.112.0) ----------
+     Woont op de Kissing Karrots Server (server-inbox.js), niet in de sync: elk toestel krijgt enkel de post van wie er
+     aangemeld is. Hier enkel een laatste kopie in het geheugen (niet in localStorage: een gedeeld toestel bewaart niets). */
+  var _inbox = { items: [], verstuurd: [], team: [], at: 0 };
+  function getTeamPost() { return _inbox; }
+  function teamPostOpen() { return _inbox.items.filter(function (i) { return !i.klaar; }).length; }
+  function loadTeamPost() { return api('GET', '/crew/inbox').then(function (j) { _inbox = { items: j.items || [], verstuurd: j.verstuurd || [], team: j.team || [], at: Date.now() }; try { emit('inbox'); } catch (e) {} return _inbox; }); }
+  function clearTeamPost() { _inbox = { items: [], verstuurd: [], team: [], at: 0 }; try { emit('inbox'); } catch (e) {} }
+  function sendTeamPost(soort, aan, tekst) { return api('POST', '/crew/inbox', { soort: soort, aan: aan, tekst: tekst }).then(function (r) { return loadTeamPost().then(function () { return r; }); }); }
+  function setTeamPostDone(id, klaar) { return api('POST', '/crew/inbox/' + encodeURIComponent(id) + '/klaar', { klaar: klaar !== false }).then(loadTeamPost); }
+  function removeTeamPost(id) { return api('DELETE', '/crew/inbox/' + encodeURIComponent(id)).then(loadTeamPost); }
 
   /* ---------- Extra uren (buiten het rooster) (v0.61.0) ----------
      Zolang er geen echt roostersysteem is (Roosters staat nog als "Binnenkort"),
@@ -3307,7 +3318,7 @@
     getHourly, getByWeekday, comparePeriods, getMenuEngineering, fnbMixMargin, getPaymentMix, getDiscountsVoids, getDrinkAttach,
     getGoals, setGoal, todayStr, weekRange, monthRange, yearRange,
     getProfile,
-    getTodos, addTodo, dismissTodo,
+    getTodos, addTodo, dismissTodo, getTeamPost, teamPostOpen, loadTeamPost, clearTeamPost, sendTeamPost, setTeamPostDone, removeTeamPost,
     getExtraHours, addExtraHours, removeExtraHours, extraHoursSum,
     getTables, addTable, removeTable, removeHighestTable, renameTable, tableConfigIssues, reservableSeats, isFreeTable,
     setCourseProgress, serveBar, getTableCourses,
