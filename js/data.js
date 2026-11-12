@@ -33,6 +33,12 @@
     'mod::menu': 'staff', 'mod::business': 'staff', 'mod::marketing': 'staff', 'mod::housekeeping': 'staff', 'mod::settings': 'staff',
     // KosmoKrew
     'kosmokrew::Teamleden': 'management', 'kosmokrew::Beschikbaarheid': 'help', 'kosmokrew::Roosters maken': 'management',
+    // Extra modules (v0.116.0, js/extra-modules.js)
+    'kosmokrew::Prikklok': 'help', 'kosmokrew::Fooienverdeling': 'management', 'kosmokrew::Prestaties naar Liantis': 'management',
+    'barzaal::Betaalterminal': 'staff', 'barzaal::Betalen aan tafel (QR)': 'staff', 'barzaal::Voorschotten & no-shows': 'staff', 'barzaal::Cadeaubonnen': 'staff', 'barzaal::Afhaal & online bestellingen': 'help', 'barzaal::Loyaliteit': 'staff', 'barzaal::Groepen & events': 'staff', 'barzaal::Fiscale kassa (GKS)': 'management', 'barzaal::Bestelvoorstel': 'staff', 'barzaal::Onderhoud melden': 'help',
+    'keuken::Bestelvoorstel': 'staff', 'keuken::Afhaal & online bestellingen': 'help', 'keuken::Onderhoud melden': 'help', 'menu::Verspilling': 'staff', 'menu::Bestelvoorstel': 'staff',
+    'business::Fiscale kassa (GKS)': 'management', 'business::Bankkoppeling': 'management', 'business::Afwijkingsmeldingen': 'management', 'business::Cadeaubonnen': 'staff', 'business::Fooienverdeling': 'management', 'business::Prestaties naar Liantis': 'management',
+    'marketing::Groepen & events': 'staff', 'marketing::Cadeaubonnen': 'staff', 'marketing::Voorschotten & no-shows': 'staff', 'housekeeping::Onderhoud': 'help', 'housekeeping::Bestelvoorstel': 'staff', 'housekeeping::Afval & duurzaamheid': 'staff',
     // Keuken
     'keuken::Items en categorieen keuken': 'staff', 'keuken::Bestellingen en voorraad keuken': 'staff', 'keuken::Verspilling': 'staff',
     // Bar/zaal
@@ -1432,7 +1438,12 @@
   // bedrijfsmodel, KPI, cashflow, rentabiliteit) werken voor staff met de cijferspiegel en zijn vrij in te stellen.
   var CLEARANCE_MIN = {
     'business::Dagomzet': 'management', 'business::Boekhouding': 'management', 'business::Lonen & afbetalingen': 'management', 'business::Kostengroepen': 'management',
-    'business::Documentenarchief': 'management', 'marketing::Gastenbestand': 'staff'
+    'business::Documentenarchief': 'management', 'marketing::Gastenbestand': 'staff',
+    // Extra modules: wie de gegevens niet krijgt (js/db-toegang.js), kan de tegel niet openen.
+    'kosmokrew::Fooienverdeling': 'management', 'business::Fooienverdeling': 'management', 'kosmokrew::Prestaties naar Liantis': 'management', 'business::Prestaties naar Liantis': 'management',
+    'business::Bankkoppeling': 'management', 'business::Afwijkingsmeldingen': 'management',
+    'barzaal::Betaalterminal': 'staff', 'barzaal::Betalen aan tafel (QR)': 'staff', 'barzaal::Voorschotten & no-shows': 'staff', 'marketing::Voorschotten & no-shows': 'staff', 'barzaal::Cadeaubonnen': 'staff', 'marketing::Cadeaubonnen': 'staff', 'business::Cadeaubonnen': 'staff',
+    'barzaal::Loyaliteit': 'staff', 'marketing::Loyaliteit': 'staff', 'marketing::Reviews': 'staff', 'marketing::Nieuwsbrief': 'staff', 'barzaal::Groepen & events': 'staff', 'marketing::Groepen & events': 'staff'
   };
   function clearanceMinimum(key) { return CLEARANCE_MIN[key] || null; }
   function getClearance(key) { var v = _clearanceIngesteld(key), m = CLEARANCE_MIN[key]; return m && roleRank(v) < roleRank(m) ? m : v; }
@@ -2879,8 +2890,12 @@
     dayOverrides: {},                    // { 'YYYY-MM-DD': { mode:'hourly'|'double', closed:true, openTime, kitchenClose, venueClose } }
     resvClosedDates: [],                 // dagen waarvoor NIEUWE reservaties gestopt zijn (bestaande blijven)
     depositEnabled: false,
-    depositThresholdCovers: 8,
-    depositPerPerson: 15,
+    depositThresholdCovers: 10,           // eigenaar 12/11/2026: voorschot als optie bij groepen vanaf 10 personen
+    depositPerPerson: 15,                 // enkel bij depositMode 'pp'
+    depositMode: 'pct',                   // eigenaar 12/11/2026: standaard 50 % van de verwachte rekening ('pct') of een vast bedrag per persoon ('pp')
+    depositPct: 50,
+    depositSpendPP: 0,                    // verwachte besteding per persoon (incl. btw); 0 = gemiddelde uit de omzet van de laatste 90 dagen
+    depositCancelHours: 2,                // kosteloos annuleren tot zoveel uur vooraf; later of niet komen = voorschot ingehouden
     occasions: ['Verjaardag', 'Jubileum', 'Zakelijk', 'Romantisch', 'Groep', 'Andere'],
     sources: ['telefoon', 'walk-in', 'widget', 'web', 'google', 'instagram', 'e-mail'],
     prescribers: [],
@@ -2889,7 +2904,10 @@
   };
   var RESV_STATUSES = ['pending', 'confirmed', 'seated', 'completed', 'no_show', 'cancelled', 'waitlist'];
   function loadResvSettings() { try { return JSON.parse(localStorage.getItem(RSVSKEY) || 'null'); } catch (e) { return null; } }
-  function getResvSettings() { var d = loadResvSettings(); if (!d) { d = clone(RESV_DEFAULTS); localStorage.setItem(RSVSKEY, JSON.stringify(d)); } var out = clone(RESV_DEFAULTS); Object.keys(d).forEach(function (k) { out[k] = d[k]; }); return out; }
+  function getResvSettings() { var d = loadResvSettings(); if (!d) { d = clone(RESV_DEFAULTS); localStorage.setItem(RSVSKEY, JSON.stringify(d)); } var out = clone(RESV_DEFAULTS); Object.keys(d).forEach(function (k) { out[k] = d[k]; });
+    // v0.116.1: het oude standaardgetal 8 stond nooit op het scherm en het voorschot stond nooit aan; de nieuwe standaard is 10 (eigenaar 12/11/2026).
+    if (!out.depositEnabled && out.depositThresholdCovers === 8) out.depositThresholdCovers = 10;
+    return out; }
   function saveResvSettings(patch) { var d = getResvSettings(); Object.assign(d, patch || {}); localStorage.setItem(RSVSKEY, JSON.stringify(d)); broadcast('resvsettings'); return d; }
 
   function _toMin(hhmm) { var m = String(hhmm || '').match(/(\d{1,2}):(\d{2})/); return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : 0; }
@@ -3005,6 +3023,31 @@
     if (status === 'completed') r.completedAt = Date.now();
     if (status === 'cancelled') r.cancelledAt = Date.now();
     saveResv(d); _applyGuestCounters(r); return r;
+  }
+  /* ---------- Voorschot bij groepen (v0.116.2) ---------- */
+  // Gemiddelde besteding per gast (incl. btw) over de laatste dagen met klanten; 0 als er geen gegevens zijn.
+  function avgSpendPerGuest(dagen) {
+    var van = _fmtDate(new Date(Date.now() - (dagen || 90) * 86400000)), som = 0, kl = 0;
+    ((getIncome() || {}).days || []).forEach(function (x) { if (x.date >= van && Number(x.klanten) > 0) { som += Number(x.brutoFood || 0) + Number(x.brutoDrink || 0); kl += Number(x.klanten); } });
+    return kl ? round2(som / kl) : 0;
+  }
+  // Het voorgestelde voorschot voor een groep: % van de verwachte rekening (afgerond op de euro) of een vast bedrag per persoon.
+  function depositAmountFor(covers, st) {
+    st = st || getResvSettings(); covers = parseInt(covers, 10) || 0;
+    if (st.depositMode === 'pp') return round2(covers * (Number(st.depositPerPerson) || 0));
+    var pp = Number(st.depositSpendPP) > 0 ? Number(st.depositSpendPP) : avgSpendPerGuest(90);
+    return Math.round(covers * pp * (Number(st.depositPct) || 0) / 100);
+  }
+  // Wat er met het voorschot moet gebeuren volgens de annulatieregel: terug (tijdig geannuleerd), ingehouden (laat of niet gekomen), verrekend (gekomen).
+  function depositAdvice(r, st) {
+    if (!r || !r.deposit || !r.deposit.required) return null;
+    st = st || getResvSettings();
+    if (r.status === 'no_show') return 'ingehouden';
+    if (r.status === 'seated' || r.status === 'completed') return 'verrekend';
+    if (r.status !== 'cancelled') return null;
+    var start = new Date(r.date + 'T' + (r.time || '00:00') + ':00').getTime(), wanneer = Number(r.cancelledAt || r.updatedAt || 0);
+    if (!wanneer) return null;
+    return (start - wanneer) / 3600000 >= (Number(st.depositCancelHours) || 0) ? 'terug' : 'ingehouden';
   }
   function cancelReservation(id, reason) { var r = updateReservation(id, { status: 'cancelled', cancelReason: reason || '', cancelledAt: Date.now() }); return r; }
   function removeReservation(id) { saveResv(loadResv().filter(function (r) { return r.id !== id; })); }
@@ -3293,7 +3336,7 @@
     getUsers, getUser, authUser, addUser, updateUser, removeUser, roleRank, clearanceMinimum,
     refreshUsers, loginNames, whoAmI, logoutServer,
     getClearance, setClearance,
-    getSession, setSession, clearSession,
+    getSession, setSession, clearSession, avgSpendPerGuest, depositAmountFor, depositAdvice,
     getCategories, addCategory, updateCategory, removeCategory, moveCategory,
     vatCodeFor, vatRate, defaultVatForSource, VAT_RATES,
     getItems, getItem, addItem, updateItem, removeItem, setAvailable, setArchived, getDrinkItems, effectivePrice, itemCourse,
