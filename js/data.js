@@ -522,7 +522,6 @@
   var _hydrateTimer = null;
   function setMediaMode(base) { _mediaBase = base || ''; }
   function onImage(fn) { _onImage = fn; }
-  function getImageDataURL(key) { return _imgCache[key] || null; }
   function putImageAt(key, dataUrl) {
     _imgCache[key] = dataUrl;
     openMedia().then(function (db) { if (!db) return; try { db.transaction('images', 'readwrite').objectStore('images').put(dataUrl, key); } catch (e) {} });
@@ -651,7 +650,6 @@
     return cat && cat.source === 'barzaal' ? 'bar' : 'kitchen';
   }
 
-  function getOrders() { return loadOrders(); }
   function getOrder(id) { return loadOrders().find(o => o.id === id); }
   function getTableOrders(table) { return loadOrders().filter(o => String(o.table) === String(table)); }
 
@@ -752,8 +750,6 @@
     saveOrders(f.all);
     return f.l;
   }
-  function setLineProgress(orderId, lineId, progress) { return updateLine(orderId, lineId, { progress: progress }); }
-  function setLineDone(orderId, lineId, done) { return updateLine(orderId, lineId, { done: !!done }); }
   function setLineCourse(orderId, lineId, course) { return updateLine(orderId, lineId, { course: Math.max(1, parseInt(course, 10) || 1) }); }
   function setLineQty(orderId, lineId, qty) {
     const f = _find(orderId, lineId); if (!f) return null;
@@ -796,14 +792,6 @@
   function getTableStatus(table) {
     return getActiveTableNumbers().indexOf(String(table)) >= 0 ? 'occupied' : 'free';
   }
-  function getTableBill(table) {
-    const lines = [];
-    getTableOrders(table).forEach(function (o) {
-      if (o.status === 'closed') return;
-      o.lines.forEach(function (l) { if (l.confirmed && !l.voided) lines.push(Object.assign({ orderId: o.id, createdAt: o.createdAt }, l)); });
-    });
-    return lines;
-  }
   function closeTable(table, note) {
     const all = loadOrders(); let n = 0; var now = Date.now();
     all.forEach(function (o) { if (String(o.table) === String(table) && o.status !== 'closed') { o.status = 'closed'; o.closedAt = now; if (note != null) o.billNote = String(note).slice(0, 100); n++; } });
@@ -816,19 +804,6 @@
   /* ---------- Daghistoriek + Z-rapport (dagafsluiting) ---------- */
   function _isToday(ms) { var d = new Date(ms), n = new Date(); return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate(); }
   function getDayHistory() { return loadOrders().filter(function (o) { return _isToday(o.createdAt); }).sort(function (a, b) { return a.createdAt - b.createdAt; }); }
-  function getDayReport() {
-    var orders = getDayHistory(); var rev = 0, items = 0, voided = 0, tables = {}, byDest = { bar: 0, kitchen: 0 };
-    orders.forEach(function (o) {
-      tables[String(o.table)] = 1;
-      o.lines.forEach(function (l) {
-        if (l.voided) { voided += l.qty; return; }
-        if (!l.confirmed) return;
-        rev += l.price * l.qty; items += l.qty;
-        byDest[l.dest === 'bar' ? 'bar' : 'kitchen'] += l.price * l.qty;
-      });
-    });
-    return { orders: orders.length, revenue: rev, items: items, voided: voided, tables: Object.keys(tables).length, byDest: byDest };
-  }
   /* ---------- Tafelrooster (FOH kan tafels bijmaken) ---------- */
   const TKEY = 'kosmo-tables-v1';
   function loadTables() {
@@ -953,9 +928,6 @@
     if (touched) saveOrders(all);
     return touched;
   }
-  function reopenLine(orderId, lineId) { return _reopen(function (o, l) { return o.id === orderId && l.id === lineId; }); }
-  function restoreCourse(table, course) { return _reopen(function (o, l) { return String(o.table) === String(table) && l.dest !== 'bar' && l.course === course; }); }
-  function restoreBar(table) { return _reopen(function (o, l) { return String(o.table) === String(table) && l.dest === 'bar'; }); }
   function restoreTable(table) { return _reopen(function (o, l) { return String(o.table) === String(table); }); }
 
   /* ---------- Sessies, personen, betalingen, rapportage (Fase 2b) ---------- */
@@ -1371,10 +1343,8 @@
   /* ---------- Kostenplaats-type per tafel (fiscaal — CostCenterType, additief) ---------- */
   var COST_TYPES = ['TABLE', 'CHAIR', 'ROOM', 'CUSTOMER', 'ON_HOLD', 'KIOSK', 'PLATFORM', 'WEBSHOP', 'OTHER'];
   function getTableCostTypes() { try { return getResvSettings().tableCostType || {}; } catch (e) { return {}; } }
-  function setTableCostType(table, type) { var m = Object.assign({}, getTableCostTypes()); if (type && type !== 'TABLE') m[String(table)] = type; else delete m[String(table)]; saveResvSettings({ tableCostType: m }); return m; }
   // Kostenplaats-type: expliciete override per tafel, anders afgeleid van de herkomst
   // (gast-QR = KIOSK, personeel/bediening = TABLE).
-  function costTypeOf(table, origin) { var o = getTableCostTypes()[String(table)]; if (o) return o; return origin === 'guest' ? 'KIOSK' : 'TABLE'; }
 
   // sessie terugzetten (foutief afgerekend): heropent orders + wist betalingen van die sessie
   function restoreSession(sessionId) {
@@ -1383,7 +1353,6 @@
     if (touched) { saveOrders(all); savePayments(getPayments().filter(function (p) { return p.sessionId !== sessionId; })); }
     return touched;
   }
-  function clearOrders() { try { localStorage.removeItem(OKEY); } catch (e) {} broadcast('orders'); }
 
   /* ---------- Chat (shared between bar/zaal and keuken) ---------- */
   function getChat() { try { return JSON.parse(localStorage.getItem(CKEY) || '[]'); } catch (e) { return []; } }
@@ -1429,7 +1398,7 @@
   function reset() { try { localStorage.removeItem(KEY); } catch (e) {} broadcast('data'); }
 
   /* ---------- Gebruikers, rollen & sessie (KosmoKrew) ---------- */
-  const ROLE_RANK = { help: 1, staff: 2, management: 3 };
+  const ROLE_RANK = { visitor: 1, help: 1, staff: 2, management: 3 }; // visitor = bezoeker (v0.117.0): kijkt zoals help, schrijft niets
   function roleRank(r) { return ROLE_RANK[r] || 1; }
   // Hernoemde tegels behouden hun eerder ingestelde toegangsniveau (sleutel = module::tegelnaam).
   const LEGACY_TILE_KEYS = { 'menu::Recepten': 'menu::F&B rekenmodule', 'menu::F&B cost analyse': 'menu::Foodcost', 'keuken::Voorbereidende fiche': 'keuken::Voorbereiding' };
@@ -1472,7 +1441,6 @@
   function loadRoster() { try { return JSON.parse(localStorage.getItem(ROSTER_KEY) || '[]'); } catch (e) { return []; } }
   function saveRoster(list) { try { localStorage.setItem(ROSTER_KEY, JSON.stringify(list || [])); } catch (e) {} }
   function getUsers() { return loadRoster(); }
-  function getUser(id) { return getUsers().find(function (u) { return u.id === id; }) || null; }
 
   // Haalt de lijst op bij de pc en ververst de lokale kopie. Lukt dat niet
   // (pc plat, geen netwerk), dan blijft de vorige kopie staan.
@@ -1595,7 +1563,6 @@
   function _uniq(a) { var s = {}, o = []; (a || []).forEach(function (x) { x = String(x).trim(); if (x && !s[x]) { s[x] = 1; o.push(x); } }); return o; }
   function getGuests() { return loadGuests(); }
   function getGuest(id) { return loadGuests().find(function (g) { return g.id === id; }); }
-  function getGuestByEmail(email) { var e = normEmail(email); if (!e) return null; return loadGuests().find(function (g) { return normEmail(g.email) === e; }) || null; }
   function _blankGuest() {
     return { id: uid('g'), title: '', firstName: '', lastName: '', email: '', phone: '', lang: 'NL',
       birthday: '', allergies: [], prefs: '', notes: '', tags: [], vip: false, blacklist: false,
@@ -1649,7 +1616,6 @@
   function addPurchase(patch) { var d = loadPurchases(); var p = Object.assign({ id: '', ref: '', supplierId: '', status: 'concept', lines: [], notes: '', createdAt: Date.now(), sentAt: null, receivedAt: null }, patch || {}); if (!p.id) p.id = uid('pur'); if (!p.ref) p.ref = _nextPurRef(d); d.push(p); savePurchases(d); return p; }
   function updatePurchase(id, patch) { var d = loadPurchases(); var p = d.find(function (x) { return x.id === id; }); if (p) { Object.assign(p, patch); savePurchases(d); } return p; }
   function removePurchase(id) { savePurchases(loadPurchases().filter(function (p) { return p.id !== id; })); }
-  function setPurchaseStatus(id, status) { var patch = { status: status }; if (status === 'verstuurd') patch.sentAt = Date.now(); if (status === 'ontvangen') patch.receivedAt = Date.now(); return updatePurchase(id, patch); }
 
   /* ---------- Documenten: facturen & levernota's (de intake / "het brein") ---------- */
   var DOCKEY = 'kosmo-documents-v1';
@@ -1691,7 +1657,6 @@
   // activeMonths: hoe lang documenten in het gewone overzicht staan (FAVV-controle: laatste 6 maanden).
   // retentionMonths: hoe lang ze minstens bewaard moeten blijven (7 jaar = 84 maanden), daarna pas verwijderbaar.
   function getDocSettings() { try { var o = JSON.parse(localStorage.getItem(DOCSETKEY) || '{}'); var rm = parseInt(o.retentionMonths, 10), am = parseInt(o.activeMonths, 10); return { retentionMonths: rm > 0 ? rm : 84, activeMonths: am > 0 ? am : 6 }; } catch (e) { return { retentionMonths: 84, activeMonths: 6 }; } }
-  function setDocSettings(patch) { var s = Object.assign(getDocSettings(), patch || {}); try { localStorage.setItem(DOCSETKEY, JSON.stringify(s)); } catch (e) {} broadcast('docsettings'); return s; }
   function _addMonths(iso, m) { var d = new Date(String(iso || '').slice(0, 10) + 'T12:00:00'); if (isNaN(d.getTime())) d = new Date(); var day = d.getDate(); d.setMonth(d.getMonth() + m); if (d.getDate() < day) d.setDate(0); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function retentionDate(dateIso) { return _addMonths(dateIso || todayStr(), getDocSettings().retentionMonths); }
   function addDocument(patch) {
@@ -2257,7 +2222,6 @@
     if ('note' in patch) p.note = patch.note || '';
     saveRepay(rep); return p;
   }
-  function removeRepayPlan(creditor) { var rep = loadRepay(), k = _lnorm(creditor); rep.plans = rep.plans.filter(function (x) { return _lnorm(x.creditor) !== k; }); saveRepay(rep); }
   function _posDaySet() { var s = {}; _kassaBetalingen().forEach(function (p) { s[businessDate(p.at)] = 1; }); return s; }
   // Btw-controle per omzetdag (v0.104.9): uit de btw per tarief volgt het bedrag excl. btw (btw ÷ tarief). Dat moet het netto
   // van de dag zijn. Wijkt het meer af dan € 5 of 0,5 %, dan staat de btw allicht onder het verkeerde tarief (6/12/21 %).
@@ -2431,16 +2395,13 @@
       note: 'Manuele invoer volgens de Liantis-loonstaat; later automatisch te importeren.' }
   };
   var HR_ACTIVE_KEY = 'kosmo-hr-provider-v1';
-  function hrProviders() { return HR_PROVIDERS; }
   function getHrProvider() { try { return localStorage.getItem(HR_ACTIVE_KEY) || 'liantis'; } catch (e) { return 'liantis'; } }
   function getHrProviderInfo() { return HR_PROVIDERS[getHrProvider()] || HR_PROVIDERS.liantis; }
-  function setHrProvider(p) { try { localStorage.setItem(HR_ACTIVE_KEY, p); } catch (e) {} broadcast('payroll'); }
 
   var PAYROLLKEY = 'kosmo-payroll-v1';
   function loadPayroll() { return _leesOfSpiegel(PAYROLLKEY, 'lonen'); }
   function savePayroll(a) { if (_alleenSpiegel(PAYROLLKEY)) return; try { localStorage.setItem(PAYROLLKEY, JSON.stringify(a)); } catch (e) {} broadcast('payroll'); }
   function getPayroll(period) { var a = loadPayroll(); return period ? a.filter(function (r) { return r.period === period; }) : a; }
-  function payrollPeriods() { var s = {}; loadPayroll().forEach(function (r) { if (r.period) s[r.period] = 1; }); return Object.keys(s).sort().reverse(); }
   function addPayrollEntry(patch) { var a = loadPayroll(); var rec = Object.assign({ id: uid('pr'), kind: 'loon', period: '', employeeId: '', provider: getHrProvider() }, patch || {}); a.push(rec); savePayroll(a); return rec; }
   function updatePayrollEntry(id, patch) { var a = loadPayroll(); var r = a.find(function (x) { return x.id === id; }); if (r) { Object.assign(r, patch); savePayroll(a); } return r; }
   function removePayrollEntry(id) { savePayroll(loadPayroll().filter(function (r) { return r.id !== id; })); }
@@ -3049,9 +3010,7 @@
     if (!wanneer) return null;
     return (start - wanneer) / 3600000 >= (Number(st.depositCancelHours) || 0) ? 'terug' : 'ingehouden';
   }
-  function cancelReservation(id, reason) { var r = updateReservation(id, { status: 'cancelled', cancelReason: reason || '', cancelledAt: Date.now() }); return r; }
   function removeReservation(id) { saveResv(loadResv().filter(function (r) { return r.id !== id; })); }
-  function assignTables(id, tableIds) { return updateReservation(id, { tableIds: tableIds || [] }); }
   function markSent(id, kind) { var p = {}; p[kind === 'reminder' ? 'reminderSent' : 'confirmationSent'] = true; return updateReservation(id, p); }
   function fillTemplate(tpl, r) {
     var nm = ((r.firstName || '') + ' ' + (r.lastName || '')).trim() || 'gast';
@@ -3175,11 +3134,9 @@
   // maximale zitplaatsen (uitzonderlijk, bv. tafel 10 -> 3, tafel 23 -> 12)
   function tableSeatsMaxOf(t) { var c = getTableCfg(); t = String(t); return c.seatsMax[t] != null ? parseInt(c.seatsMax[t], 10) : tableSeatsOf(t); }
   // in welke samenvoegbare reeks zit deze tafel? (of null)
-  function tableGroupOf(t) { var c = getTableCfg(); t = String(t); return c.groups.filter(function (g) { return g.indexOf(t) >= 0; })[0] || null; }
   // in welke zone/ruimte hoort deze tafel? (leeg = niet toegewezen)
   function tableZoneOf(t) { var c = getTableCfg(); t = String(t); return c.zones[t] || ''; }
   // positie op de plattegrond in % (of null als nog niet geplaatst)
-  function tablePosOf(t) { var c = getTableCfg(); t = String(t); var p = c.pos[t]; return (p && typeof p.x === 'number') ? { x: p.x, y: p.y } : null; }
   function seatingDuration() { return getTableCfg().seatingDuration; }
 
   /* ---------- Tafelactivatie (bediening opent tafel voor bestellingen) ---------- */
@@ -3333,7 +3290,7 @@
   window.KosmoData = {
     ALLERGEEN_SUB: ALLERGEEN_SUB,
     getVisual, setVisual, heroLib, heroStandaard, heroThema, heroVoor, setHero, addHero, removeHero, checkStaffPin, setStaffPin, hasStaffPin,
-    getUsers, getUser, authUser, addUser, updateUser, removeUser, roleRank, clearanceMinimum,
+    getUsers, authUser, addUser, updateUser, removeUser, roleRank, clearanceMinimum,
     refreshUsers, loginNames, whoAmI, logoutServer,
     getClearance, setClearance,
     getSession, setSession, clearSession, avgSpendPerGuest, depositAmountFor, depositAdvice,
@@ -3343,19 +3300,19 @@
     promoInfo, promoActivePct, promoDefaultUntil, promoToInput, promoFromInput, promoUntilLabel, getPromoReport,
     addItemCategory, removeItemCategory, moveItem,
     placeholder, imgFor, tintFor, resolveImg, putImage, delImage, ready, loadImages,
-    setMediaMode, onImage, getImageDataURL, putImageAt,
+    setMediaMode, onImage, putImageAt,
     getBasket, setBasket, addToBasket, setNote, setQty, basketCount, clearBasket,
     subscribe, broadcast, emit,
-    placeOrder, getOrders, getOrder, getTableOrders, confirmOrder,
-    updateLine, setLineProgress, setLineDone, setLineCourse, setLineQty, voidLine, setLinePrice,
+    placeOrder, getOrder, getTableOrders, confirmOrder,
+    updateLine, setLineCourse, setLineQty, voidLine, setLinePrice,
     getKitchenLines, getBarLines, getPendingOrders, advanceCourse,
-    getActiveTableNumbers, getTableStatus, getTableBill, getOpenBill, closeTable, clearOrders,
+    getActiveTableNumbers, getTableStatus, getOpenBill, closeTable,
     getPersons, setPersons, settleBill, getPayments, getDayPayments, getLiveReport, getDaySessions, closeDay, getReports, computeReport,
     getPaymentMethods, addPaymentMethod, removePaymentMethod, restoreSession,
     getPaymentTypeMap, payTypeFor, setPaymentType, guessPayType, PAY_TYPES,
     getDeviceId, getTerminalLabel, setTerminalLabel,
-    getTableCostTypes, setTableCostType, costTypeOf, COST_TYPES,
-    getDayHistory, getDayReport, destForItem, getBillNote, setBillNote,
+    getTableCostTypes, COST_TYPES,
+    getDayHistory, destForItem, getBillNote, setBillNote,
     businessDate, dayReport, rangeReport, getRunningWeek, getPeriodBreakdown,
     getHourly, getByWeekday, comparePeriods, getMenuEngineering, fnbMixMargin, getPaymentMix, getDiscountsVoids, getDrinkAttach,
     getGoals, setGoal, todayStr, weekRange, monthRange, yearRange,
@@ -3364,29 +3321,29 @@
     getExtraHours, addExtraHours, removeExtraHours, extraHoursSum,
     getTables, addTable, removeTable, removeHighestTable, renameTable, tableConfigIssues, reservableSeats, isFreeTable,
     setCourseProgress, serveBar, getTableCourses,
-    reopenLine, restoreCourse, restoreBar, restoreTable,
+    restoreTable,
     getChat, addChat, clearChat, getAskBill, setAskBill, requestBill, getBillRequests, hasBillRequest, clearBillRequest, getStdMessages, addStdMessage, removeStdMessage,
-    getGuests, getGuest, getGuestByEmail, addGuestManual, upsertGuest, updateGuest, removeGuest,
+    getGuests, getGuest, addGuestManual, upsertGuest, updateGuest, removeGuest,
     getSuppliers, getSupplier, addSupplier, updateSupplier, removeSupplier, supplierStats,
-    getPurchases, getPurchase, addPurchase, updatePurchase, removePurchase, setPurchaseStatus, purchaseTotal,
+    getPurchases, getPurchase, addPurchase, updatePurchase, removePurchase, purchaseTotal,
     getDocuments, getDocument, addDocument, updateDocument, removeDocument, docTotal,
     getAlias, getAliasPack, setAlias, getLineCat, setLineCat, SPEND_CATS, matchDocuments,
     getSpendCats, getSpendCatDefs, spendCatDef, spendCatIsFnb, addSpendCat, updateSpendCat, removeSpendCat,
     docArticles, applyMappingsToDocs, spendByCategory,
-    getKassaVanaf, setKassaVanaf, kassaTeltOp, kassaGenegeerd, getActiveDocuments, spendCoverage, assetRegister, depreciation, lastRevenueDate, monthlyRevenue, breakEven, getIncome, importIncome, incomeSummary, btwTariefAfwijking, financeReport, ledgerVatIn, vatReturn, getLedger, importLedger, updateLedgerEntry, setLedgerCell, vatPaidSummary, getRepayments, addRepayPlan, updateRepayPlan, removeRepayPlan, ledgerStatus, ledgerSpend, ledgerSummary, getDocInbox, setInboxStatus, matchSupplier, docFieldsFromExtraction, findDuplicateDoc, findDocIssues, markDuplicateDocs, getDocumentArchive,
-    getDocSettings, setDocSettings, retentionDate, isSummaryInvoice, suggestLevernotas, compareTotals, linkLevernotas,
+    getKassaVanaf, setKassaVanaf, kassaTeltOp, kassaGenegeerd, getActiveDocuments, spendCoverage, assetRegister, depreciation, lastRevenueDate, monthlyRevenue, breakEven, getIncome, importIncome, incomeSummary, btwTariefAfwijking, financeReport, ledgerVatIn, vatReturn, getLedger, importLedger, updateLedgerEntry, setLedgerCell, vatPaidSummary, getRepayments, addRepayPlan, updateRepayPlan, ledgerStatus, ledgerSpend, ledgerSummary, getDocInbox, setInboxStatus, matchSupplier, docFieldsFromExtraction, findDuplicateDoc, findDocIssues, markDuplicateDocs, getDocumentArchive,
+    getDocSettings, retentionDate, isSummaryInvoice, suggestLevernotas, compareTotals, linkLevernotas,
     getBizModel, updateBizGroup, addBizGroup, removeBizGroup, costGroupsReport, moveBizCategory, moveBizGroup, removeBizGroupInto, renameLedgerPost, moveLedgerPost, businessModelReport, fnbSalesCost,
     purchaseVatFor, docLineVat, inputVatSummary,
-    hrProviders, getHrProvider, getHrProviderInfo, setHrProvider,
-    getPayroll, payrollPeriods, addPayrollEntry, updatePayrollEntry, removePayrollEntry,
+    getHrProvider, getHrProviderInfo,
+    getPayroll, addPayrollEntry, updatePayrollEntry, removePayrollEntry,
     payrollEmployerCost, payrollSummary,
     importGuests, filterGuests, guestStats, guestFrequency, FREQ_LABELS, tagLabel, isFreqTag, TAG_TAXONOMY, exportGuestsCSV, parseCSV,
     getResvSettings, saveResvSettings, getReservations, getReservation, addReservation, updateReservation,
-    setReservationStatus, cancelReservation, removeReservation, assignTables, markSent, fillTemplate,
+    setReservationStatus, removeReservation, markSent, fillTemplate,
     availability, resvDayStats, durationForCovers, RESV_STATUSES,
     getDayConfig, isDoubleSeating, isResvClosed, setResvClosed, toggleResvClosed,
     getTableLink, setTableLink, clearTableLink, seatReservation, getFloorPlan, getUpcomingArrivals,
-    getTableCfg, tableSeatsOf, tableSeatsMaxOf, tableGroupOf, tableZoneOf, tablePosOf, seatingDuration,
+    getTableCfg, tableSeatsOf, tableSeatsMaxOf, tableZoneOf, seatingDuration,
     isReservable, autoAssignTable,
     isTableActive, activateTable, deactivateTable, isTableInUse, pruneStaleActivations,
     getTableReservations, getTableShifts, moveTable, getTableMovedFrom, walkinFreeTables, walkinCapacity,
