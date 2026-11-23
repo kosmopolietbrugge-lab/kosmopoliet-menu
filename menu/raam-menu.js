@@ -10,7 +10,7 @@
   var D = window.KosmoData, UI = window.KosmoMenuUI;
 
   function $(s) { return document.querySelector(s); }
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  function esc(s) { return window.KosmoHtml.esc(s); } // js/html.js
   function ucfirst(s) { s = String(s == null ? '' : s).trim(); return s.charAt(0).toUpperCase() + s.slice(1); }
   function price(it) { return UI.price(D, it, 'p', true); }
 

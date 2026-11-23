@@ -159,7 +159,7 @@
   var LIJST = ['Gluten', 'Schaaldieren', 'Eieren', 'Vis', 'Pinda', 'Soja', 'Melk', 'Noten', 'Selderij', 'Mosterd', 'Sesam', 'Sulfiet', 'Lupine', 'Weekdieren'];
   var SUBS = { Gluten: ['Tarwe', 'Spelt', 'Kamut', 'Rogge', 'Gerst', 'Haver'], Noten: ['Amandel', 'Hazelnoot', 'Walnoot', 'Cashew', 'Pecan', 'Paranoot', 'Pistache', 'Macadamia'] };
   var opt = { bestellen: false, open: function () {}, close: function () {}, opnieuw: function () {} };
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  function esc(s) { return window.KosmoHtml.esc(s); } // js/html.js
   function leeg() { return { lijst: [], subs: {}, soort: 'allergie', bon: false }; }
   function lees() { try { var o = JSON.parse(sessionStorage.getItem(KEY) || 'null'); if (o && Array.isArray(o.lijst)) { o.subs = o.subs || {}; return o; } } catch (e) {} return leeg(); }
   var st = lees();

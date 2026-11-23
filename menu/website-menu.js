@@ -16,7 +16,7 @@
 
   function $(s, r) { return (r || document).querySelector(s); }
   function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  function esc(s) { return window.KosmoHtml.esc(s); } // js/html.js
   function euro(n) { return '€ ' + Number(n || 0).toFixed(2).replace('.', ','); }
   function effPrice(it) { return (D.effectivePrice ? D.effectivePrice(it) : Number(it.price || 0)); }
   function priceHtml(it, cls) { return KosmoMenuUI.price(D, it, cls); }
