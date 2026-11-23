@@ -2407,6 +2407,165 @@
   function removePayrollEntry(id) { savePayroll(loadPayroll().filter(function (r) { return r.id !== id; })); }
   // werkgeverskost (= personeelskost) van één loon-record
   function payrollEmployerCost(r) { return Number(r.bruto || 0) + Number(r.rszWerkgever || 0); }
+  /* Uren & loon per teamlid voor één maand (v0.118.0).
+     Drie databanen komen hier per persoon samen, telkens via het id van het teamlid (KosmoKrew › Teamleden):
+       - geplande uren   ← rooster (kosmo-cal-v1, gepubliceerde diensten; uid, of naam als er geen uid is)
+       - extra uren      ← Mijn uren (kosmo-extrauren-v1, uid)
+       - loonregel       ← loonmodule (kosmo-payroll-v1, employeeId + periode; manueel volgens de Liantis-loonstaat)
+     Elk teamlid krijgt een rij, ook zonder loonregel. Wat aan niemand te koppelen valt, komt apart terug (losseEinden),
+     zodat een gebroken link zichtbaar is in plaats van stil te verdwijnen. rk = KosmoRooster (rekenkern van het rooster). */
+  function payrollOverview(period, rk) {
+    rk = rk || (typeof window !== 'undefined' && window.KosmoRooster) || null;
+    var users = getUsers(), van = period + '-01', tot = period + '-31';
+    var nm = function (s) { return String(s || '').trim().toLowerCase(); };
+    var byId = {}, byName = {};
+    var rows = users.map(function (u) {
+      var r = { id: u.id, name: u.name || u.id, role: u.role || '', statuut: u.statuut || '', uurkost: u.uurkost == null ? null : u.uurkost,
+        brutoUurloon: u.brutoUurloon == null ? null : u.brutoUurloon, familienaam: u.familienaam || '', opbouw: loonOpbouwVan(u), diensten: 0, geplandeUren: 0, extraUren: 0, loon: null };
+      byId[u.id] = r; byName[nm(u.name)] = r; return r;
+    });
+    var los = { diensten: [], extra: [], loon: [] };
+    var cal = {}; try { cal = JSON.parse(localStorage.getItem('kosmo-cal-v1') || '{}') || {}; } catch (e) {}
+    var shifts = Array.isArray(cal.shifts) ? cal.shifts : [];
+    if (rk && rk.voorTeam) shifts = rk.voorTeam(shifts);
+    shifts.forEach(function (s) {
+      if (!s || s.open || !s.date || s.date < van || s.date > tot) return;
+      var r = (s.uid && byId[s.uid]) || byName[nm(s.name)];
+      var u = rk && rk.uren ? rk.uren(s) : 0;
+      if (!r) { los.diensten.push({ date: s.date, name: s.name || '', uid: s.uid || '', uren: u }); return; }
+      r.diensten++; r.geplandeUren = Math.round((r.geplandeUren + u) * 100) / 100;
+    });
+    loadExtraHours().forEach(function (e) {
+      if (!e.date || e.date < van || e.date > tot) return;
+      var r = byId[e.uid] || byName[nm(e.name)];
+      if (!r) { los.extra.push(e); return; }
+      r.extraUren = Math.round((r.extraUren + (Number(e.hours) || 0)) * 100) / 100;
+    });
+    getPayroll(period).forEach(function (p) {
+      if (p.kind === 'fee') return;
+      var r = byId[p.employeeId];
+      if (!r || r.loon) { los.loon.push(p); return; }   // geen teamlid gekozen, onbekend id, of een tweede regel voor dezelfde persoon
+      r.loon = p;
+    });
+    rows.forEach(function (r) { r.totaalUren = Math.round((r.geplandeUren + r.extraUren) * 100) / 100; r.werkgeverskost = r.loon ? payrollEmployerCost(r.loon) : null;
+      // Geen opbouw maar wel een loonregel en uren (vaste medewerkers, loonstaat): opbouw per uur afleiden = bedrag / uren deze maand.
+      r.afgeleid = !r.opbouw && r.loon && r.totaalUren > 0 && Number(r.loon.bruto) > 0 ? { bron: 'Loonstaat ' + period + ' (afgeleid)', bruto: Math.round(Number(r.loon.bruto) / r.totaalUren * 100) / 100,
+        rszWerkgever: Math.round(Number(r.loon.rszWerkgever || 0) / r.totaalUren * 100) / 100 } : null;
+      r.maandOpbouw = r.opbouw ? { bruto: Math.round(r.opbouw.bruto * r.totaalUren * 100) / 100, lasten: Math.round(r.opbouw.lasten * r.totaalUren * 100) / 100, totaal: Math.round(r.opbouw.totaal * r.totaalUren * 100) / 100 } : null; });
+    return { period: period, rows: rows, losseEinden: los, teamGeladen: users.length > 0 };
+  }
+  /* Controle kasboek ↔ loonmodule (v0.119.0). Legt per teamlid en per maand naast elkaar:
+       - netto uit het kasboek (Lonen & afbetalingen: "Loon <naam>" + "Extra loon <naam>")
+       - netto en bruto uit de loonmodule (Uren & loon)
+       - bruto volgens contract = bruto-uurloon (Teamleden) × uren (rooster + extra)
+     en geeft per persoon de effectieve uurlonen (bruto/u, netto/u) en meldingen bij verschillen. Wijzigt niets:
+     beide bronnen blijven zoals ze zijn tot Laurens kiest welke de personeelskost draagt.
+     Meldingen: netto-verschil (> tol.netto €), enkel-kasboek, enkel-loonmodule, uurloon-afwijking (bruto wijkt > tol.uurloonPct % af
+     van uren × bruto-uurloon), geen-uren (wel loon, geen uren in rooster of Mijn uren). */
+  /* Grenzen en meldingen van de looncontrole (v0.120.0): management stelt ze in via Settings › Looncontrole.
+     Sleutel valt onder 'kosmo-payroll' en is dus enkel voor management (js/db-toegang.js). */
+  var LOON_TOL = { netto: 1, uurloonPct: 10, interimPct: 5, interimBron: 'rayl, myjobdrop', meldManagement: true };
+  var LOONCTRLKEY = 'kosmo-payroll-controle-v1';
+  function getLoonControle() { var o = {}; try { o = JSON.parse(localStorage.getItem(LOONCTRLKEY) || '{}') || {}; } catch (e) {} return Object.assign({}, LOON_TOL, o); }
+  function saveLoonControle(patch) {
+    var c = getLoonControle(), p = patch || {};
+    ['netto', 'uurloonPct', 'interimPct'].forEach(function (k) { if (p[k] !== undefined) { var v = parseFloat(String(p[k]).replace(',', '.')); if (isFinite(v) && v >= 0) c[k] = v; } });
+    if (p.interimBron !== undefined) c.interimBron = String(p.interimBron || '').slice(0, 200);
+    if (p.meldManagement !== undefined) c.meldManagement = !!p.meldManagement;
+    try { localStorage.setItem(LOONCTRLKEY, JSON.stringify(c)); } catch (e) {} try { emit('data'); } catch (e) {} return c;
+  }
+  // Loonopbouw per uur van een teamlid: bruto (wat de medewerker verdient) + werkgeverslasten = wat wij per uur betalen (excl. btw).
+  function loonOpbouwVan(u) {
+    if (!u || u.brutoUurloon == null) return null;
+    var o = u.loonOpbouw || {}, n = function (k) { return Number(o[k]) || 0; };
+    var lasten = Math.round((n('rszWerkgever') + n('arbeidsongevallen') + n('globaleBijdrage') + n('fee')) * 100) / 100;
+    return { bron: o.bron || '', functie: o.functie || '', barema: o.barema || '', bruto: Number(u.brutoUurloon), rszWerkgever: n('rszWerkgever'),
+      arbeidsongevallen: n('arbeidsongevallen'), globaleBijdrage: n('globaleBijdrage'), fee: n('fee'), lasten: lasten,
+      totaal: Math.round((Number(u.brutoUurloon) + lasten) * 100) / 100, volledig: !!u.loonOpbouw, bijgewerkt: o.bijgewerkt || '' };
+  }
+  function _loonPersoon(label) {   // "Extra loon Magno" -> { naam: 'magno', extra: true }; andere labels -> null
+    var k = _lnorm(label), extra = k.indexOf('extraloon') === 0;
+    var rest = extra ? k.slice(9) : (k.indexOf('loon') === 0 ? k.slice(4) : null);
+    return rest ? { naam: rest, extra: extra } : null;
+  }
+  function wageReconcile(period, rk, tol) {
+    tol = Object.assign({}, getLoonControle(), tol || {});
+    var ov = payrollOverview(period, rk), r2 = function (v) { return Math.round(v * 100) / 100; };
+    var rows = ov.rows.map(function (r) {
+      return { id: r.id, name: r.name, familienaam: r.familienaam, statuut: r.statuut, brutoUurloon: r.brutoUurloon, uren: r.totaalUren, opbouw: r.opbouw, maandOpbouw: r.maandOpbouw,
+        kasboekNetto: null, kasboekRaming: false, kasboekRegels: [], loonNetto: r.loon ? Number(r.loon.netto || 0) : null,
+        loonBruto: r.loon ? Number(r.loon.bruto || 0) : null, meldingen: [] };
+    });
+    var match = function (naam) {   // naam uit het kasboeklabel tegen voornaam of volledige naam van het teamlid
+      return rows.filter(function (r) { var n = _lnorm(r.name), v = _lnorm(String(r.name).split(/\s+/)[0]); return naam === n || naam === v || (LEDGER_ALIAS['loon' + naam] || []).indexOf(n) >= 0 || (LEDGER_ALIAS['loon' + naam] || []).indexOf(v) >= 0; })[0] || null;
+    };
+    var losseKasboek = [];
+    loadLedger().forEach(function (e) {
+      if (e.month !== period || e.superseded || e.excluded || e.category !== 'Lonen & maaltijdcheques') return;
+      var p = _loonPersoon(e.label); if (!p) return;
+      var r = match(p.naam);
+      if (!r) { losseKasboek.push({ label: e.label, amount: Number(e.amount) || 0, kind: e.kind }); return; }
+      r.kasboekNetto = r2((r.kasboekNetto || 0) + (Number(e.amount) || 0));
+      r.kasboekRegels.push({ label: e.label, amount: Number(e.amount) || 0, kind: e.kind });
+      if (e.kind === 'raming') r.kasboekRaming = true;
+    });
+    rows.forEach(function (r) {
+      var heeftKb = r.kasboekNetto != null && r.kasboekNetto > 0, heeftLm = r.loonNetto != null && (r.loonNetto > 0 || r.loonBruto > 0);
+      r.brutoPerUur = heeftLm && r.uren > 0 ? r2(r.loonBruto / r.uren) : null;
+      r.nettoPerUur = r.uren > 0 ? (heeftLm ? r2(r.loonNetto / r.uren) : (heeftKb ? r2(r.kasboekNetto / r.uren) : null)) : null;
+      r.brutoVolgensContract = r.brutoUurloon != null && r.uren > 0 ? r2(r.brutoUurloon * r.uren) : null;
+      if (heeftKb && heeftLm) {
+        r.nettoVerschil = r2(r.kasboekNetto - r.loonNetto);
+        if (Math.abs(r.nettoVerschil) > tol.netto) r.meldingen.push({ soort: 'netto-verschil', tekst: 'Netto kasboek ' + r.kasboekNetto.toFixed(2) + ' ≠ loonmodule ' + r.loonNetto.toFixed(2) + (r.kasboekRaming ? ' (kasboek is een raming)' : '') });
+      } else if (heeftKb && r.statuut !== 'eigenaar') r.meldingen.push({ soort: 'enkel-kasboek', tekst: 'Wel netto in het kasboek, nog geen loonregel' + (r.kasboekRaming ? ' (kasboek is een raming)' : '') });
+      else if (heeftLm && !heeftKb) r.meldingen.push({ soort: 'enkel-loonmodule', tekst: 'Wel een loonregel, niets in het kasboek' });
+      if (heeftLm && r.brutoVolgensContract != null && r.brutoVolgensContract > 0) {
+        var pct = r2((r.loonBruto - r.brutoVolgensContract) / r.brutoVolgensContract * 100); r.uurloonAfwijkingPct = pct;
+        if (Math.abs(pct) > tol.uurloonPct) r.meldingen.push({ soort: 'uurloon-afwijking', tekst: 'Bruto ' + r.loonBruto.toFixed(2) + ' wijkt ' + pct + ' % af van uren × bruto-uurloon (' + r.brutoVolgensContract.toFixed(2) + ')' });
+      }
+      if ((heeftLm || heeftKb) && !(r.uren > 0) && r.statuut !== 'eigenaar') r.meldingen.push({ soort: 'geen-uren', tekst: 'Loon zonder uren in het rooster of Mijn uren' });
+    });
+    // Maandtotaal: wat het kasboek als personeelskost telt (lonen + sociale lasten) tegenover de loonmodule (bruto + RSZ werkgever).
+    var kbCat = function (cat) { return r2(loadLedger().filter(function (e) { return e.month === period && !e.superseded && !e.excluded && e.category === cat; }).reduce(function (a, e) { return a + (Number(e.amount) || 0); }, 0)); };
+    var sum = payrollSummary(period);
+    var totaal = { kasboekLonen: kbCat('Lonen & maaltijdcheques'), kasboekSocialeLasten: kbCat('Sociale lasten, vakantiegeld & personeelsverzekering'), loonmodulePersoneelskost: r2(sum.personeelskost) };
+    totaal.kasboekPersoneel = r2(totaal.kasboekLonen + totaal.kasboekSocialeLasten);
+    totaal.dubbelRisico = totaal.kasboekPersoneel > 0 && totaal.loonmodulePersoneelskost > 0;   // beide tellen nu op in het bedrijfsmodel
+    /* Interimkantoor (Rayl, vroeger Myjobdrop): de facturen van die maand (excl. btw) tegenover wat de uren kosten volgens
+       de loonopbouw van wie via dat kantoor werkt. Transport, premies en kledijvergoeding staan niet in de opbouw:
+       die verklaren een deel van een verschil. */
+    var bronnen = String(tol.interimBron || '').split(',').map(function (x) { return _lnorm(x); }).filter(Boolean);
+    var supNaam = {}; loadSuppliers().forEach(function (x) { supNaam[x.id] = x.name || ''; });
+    var interimFact = r2(loadDocuments().filter(function (d) {
+      if (!isActiveDoc(d) || d.type === 'levernota' || String(d.date || '').slice(0, 7) !== period) return false;
+      var n = _lnorm(d.supplierName || supNaam[d.supplierId] || ''); return bronnen.some(function (b) { return n.indexOf(b) >= 0; });
+    }).reduce(function (a, d) { return a + docTotal(d); }, 0));
+    var viaInterim = rows.filter(function (r) { return r.opbouw && bronnen.indexOf(_lnorm(r.opbouw.bron)) >= 0; });
+    var interimVerwacht = r2(viaInterim.reduce(function (a, r) { return a + (r.maandOpbouw ? r.maandOpbouw.totaal : 0); }, 0));
+    totaal.interim = { facturen: interimFact, verwacht: interimVerwacht, mensen: viaInterim.length, verschil: r2(interimFact - interimVerwacht), meldingen: [] };
+    if (interimVerwacht > 0 || interimFact > 0) {
+      var basis = interimVerwacht || interimFact, pctI = r2((interimFact - interimVerwacht) / basis * 100);
+      totaal.interim.pct = pctI;
+      if (!interimFact) totaal.interim.meldingen.push({ soort: 'interim-geen-factuur', tekst: 'Uren via het interimkantoor, maar nog geen factuur voor deze maand' });
+      else if (!interimVerwacht) totaal.interim.meldingen.push({ soort: 'interim-geen-uren', tekst: 'Factuur van het interimkantoor, maar geen uren met loonopbouw' });
+      else if (Math.abs(pctI) > tol.interimPct) totaal.interim.meldingen.push({ soort: 'interim-verschil', tekst: 'Facturen ' + interimFact.toFixed(2) + ' wijken ' + pctI + ' % af van uren × loonopbouw (' + interimVerwacht.toFixed(2) + ')' });
+    }
+    return { period: period, rows: rows, losseKasboek: losseKasboek, totaal: totaal, tol: tol,
+      aantalMeldingen: rows.reduce(function (a, r) { return a + r.meldingen.length; }, 0) + totaal.interim.meldingen.length };
+  }
+  // Voor het to-do-belletje van management: verschillen in de vorige en de huidige maand. Leeg als de melding uit staat.
+  function loonMeldingen(vandaag) {
+    var c = getLoonControle(); if (!c.meldManagement || !getUsers().length) return [];
+    var t = vandaag || todayStr(), y = +t.slice(0, 4), m = +t.slice(5, 7), vorige = (m === 1 ? (y - 1) + '-12' : y + '-' + String(m - 1).padStart(2, '0'));
+    return [vorige, t.slice(0, 7)].map(function (p) { var w = wageReconcile(p); return { period: p, aantal: w.aantalMeldingen }; }).filter(function (x) { return x.aantal > 0; });
+  }
+  // Loonregel van één teamlid in één periode: bestaat hij, dan aanpassen; anders aanmaken. Zo hoeft niemand eerst
+  // "medewerker toevoegen" te klikken en een naam te kiezen.
+  function setPayrollFor(period, employeeId, patch) {
+    var a = loadPayroll(), r = a.find(function (x) { return x.period === period && x.kind !== 'fee' && x.employeeId === employeeId; });
+    if (r) { Object.assign(r, patch || {}); savePayroll(a); return r; }
+    return addPayrollEntry(Object.assign({ period: period, kind: 'loon', employeeId: employeeId }, patch || {}));
+  }
   // roll-up per periode: personeelskost vs leverancierskost (provider-honorarium)
   function payrollSummary(period) {
     var rows = getPayroll(period), loon = rows.filter(function (r) { return r.kind !== 'fee'; }), fees = rows.filter(function (r) { return r.kind === 'fee'; });
@@ -3336,7 +3495,7 @@
     purchaseVatFor, docLineVat, inputVatSummary,
     getHrProvider, getHrProviderInfo,
     getPayroll, addPayrollEntry, updatePayrollEntry, removePayrollEntry,
-    payrollEmployerCost, payrollSummary,
+    payrollEmployerCost, payrollSummary, payrollOverview, setPayrollFor, wageReconcile, loonMeldingen, getLoonControle, saveLoonControle, loonOpbouwVan,
     importGuests, filterGuests, guestStats, guestFrequency, FREQ_LABELS, tagLabel, isFreqTag, TAG_TAXONOMY, exportGuestsCSV, parseCSV,
     getResvSettings, saveResvSettings, getReservations, getReservation, addReservation, updateReservation,
     setReservationStatus, removeReservation, markSent, fillTemplate,
