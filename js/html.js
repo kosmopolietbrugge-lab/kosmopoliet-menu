@@ -7,7 +7,7 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return TEKENS[c]; }); }
   // Versie van deze code (v0.124.0). Moet gelijk zijn aan CACHE in sw.js; tools/controleer.js kijkt dat na, anders geen uitrol.
   // js/pouch-sync.js stuurt ze mee met elke aanvraag naar de databank; de server weigert schrijfacties van een andere versie.
-  var VERSIE = 'v0.124.0';
+  var VERSIE = 'v0.125.0';
   var api = { esc: esc, VERSIE: VERSIE };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) { root.KosmoHtml = api; root.KOSMO_VERSIE = VERSIE; }
