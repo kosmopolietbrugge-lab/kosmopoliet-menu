@@ -643,11 +643,18 @@
   function loadOrders() { try { return JSON.parse(localStorage.getItem(OKEY) || '[]'); } catch (e) { return []; } }
   function saveOrders(list) { try { localStorage.setItem(OKEY, JSON.stringify(list)); } catch (e) {} broadcast('orders'); }
 
+  /* "Bar of keuken" heeft drie namen, elk op zijn eigen laag (bewust zo gelaten: de opgeslagen gegevens hernoemen zou een migratie
+     van alle bestellingen en betalingen vragen):
+       categorie.source  'barzaal' | 'keuken'   waar een categorie standaard vandaan komt (menukaart)
+       item.station      'barzaal' | 'keuken'   waar dit gerecht gemaakt wordt; wint van de categorie (Specials, v0.91)
+       bestelregel.dest  'bar'     | 'kitchen'  waar de bon heen gaat (service, rapporten, btw)
+     Dit is de ENIGE plek die van de eerste twee naar de derde vertaalt (tests/sleutels.test.js bewaakt dat, v0.130.0). */
+  function destVanStation(station) { return station === 'barzaal' ? 'bar' : 'kitchen'; }
   function destForItem(itemId) {
     const it = getItem(itemId); if (!it) return 'kitchen';
-    if (it.station) return it.station === 'barzaal' ? 'bar' : 'kitchen';
+    if (it.station) return destVanStation(it.station);
     const cat = load().categories.find(c => c.id === (it.cats && it.cats[0]));
-    return cat && cat.source === 'barzaal' ? 'bar' : 'kitchen';
+    return destVanStation(cat && cat.source);
   }
 
   function getOrder(id) { return loadOrders().find(o => o.id === id); }

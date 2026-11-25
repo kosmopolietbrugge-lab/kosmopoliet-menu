@@ -8,17 +8,28 @@
 
   /* ---------- categorieën ---------- */
   function text(c) { return ((c.id || '') + ' ' + (c.name || '')).toLowerCase(); }
+  /* Wat voor categorie is dit? v0.130.0: een eigen veld 'soort' ('specials' | 'suggestie' | 'promotie' | 'gewoon') wint altijd.
+     Zonder dat veld wordt het uit de naam afgeleid, maar enkel vanaf het begin van een woord: vroeger telde elk stukje 'acti'
+     in de naam, zodat bv. "Reacties" of "Attracties" als Promoties vooraan op de kaart kwam. */
+  function soort(c) {
+    c = c || {};
+    if (/^(specials|suggestie|promotie|gewoon)$/.test(c.soort || '')) return c.soort;
+    var s = text(c);
+    if (c.id === 'specials' || /\bspecials?\b/.test(s)) return 'specials';
+    if (/\b(suggest|aanrad)/.test(s)) return 'suggestie';
+    if (/\b(promo|acties?\b)/.test(s)) return 'promotie';
+    return 'gewoon';
+  }
   // 'special' = Specials, Suggesties en Promoties (altijd vooraan, eigen kleur); 'drink' = bar/zaal; 'food' = keuken.
   function kind(c) {
-    var s = text(c);
-    if (c.id === 'specials' || /\bspecials?\b/.test(s) || s.indexOf('suggest') >= 0 || s.indexOf('aanrad') >= 0 || s.indexOf('promo') >= 0 || s.indexOf('acti') >= 0) return 'special';
+    if (soort(c) !== 'gewoon') return 'special';
     return c.source === 'barzaal' ? 'drink' : 'food';
   }
   function rank(c) {
-    var s = text(c);
-    if (c.id === 'specials' || /\bspecials?\b/.test(s)) return 0;
-    if (s.indexOf('suggest') >= 0 || s.indexOf('aanrad') >= 0) return 1;
-    if (kind(c) === 'special') return 2;
+    var s = soort(c);
+    if (s === 'specials') return 0;
+    if (s === 'suggestie') return 1;
+    if (s === 'promotie') return 2;
     return c.source === 'barzaal' ? 3 : 4;
   }
   // De categorieën die gasten zien: Specials, Suggesties en Promoties blijven staan (ook leeg, behalve Specials), de rest enkel met beschikbare gerechten.
@@ -143,7 +154,7 @@
     document.querySelectorAll('.sheet').forEach(function (s) { drag(s, closeAll); });
   }
 
-  window.KosmoMenuUI = { kind: kind, cats: cats, items: items, price: price, euro: euro, chips: chips, init: init, opened: opened, closed: closed };
+  window.KosmoMenuUI = { soort: soort, kind: kind, cats: cats, items: items, price: price, euro: euro, chips: chips, init: init, opened: opened, closed: closed };
 })();
 
 /* ============================================================
