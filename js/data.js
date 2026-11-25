@@ -45,7 +45,7 @@
     'barzaal::Items en categorieen bar': 'staff', 'barzaal::Bestellingen en voorraad bar': 'staff', 'barzaal::Dagafsluiting': 'staff', 'barzaal::Reserveringen': 'staff',
     // F&B (alles staff)
     'menu::Prijzen leveranciers': 'management', 'housekeeping::Prijzen leveranciers': 'management',
-    'menu::Menukaart (alle categorieen)': 'staff', 'menu::Recepten': 'staff', 'menu::F&B cost analyse': 'staff', 'menu::F&B rekenmodule': 'staff', 'menu::Foodcost': 'staff', 'menu::Menu-analyse': 'staff', 'menu::Margecontributie / Mix-marge': 'staff', 'menu::Klantmenu (QR)': 'staff', 'menu::Seizoen & specials': 'staff',
+    'menu::Menukaart (alle categorieen)': 'staff', 'menu::Recepten': 'staff', 'menu::Menu in opbouw': 'staff', 'menu::F&B cost analyse': 'staff', 'menu::F&B rekenmodule': 'staff', 'menu::Foodcost': 'staff', 'menu::Menu-analyse': 'staff', 'menu::Margecontributie / Mix-marge': 'staff', 'menu::Klantmenu (QR)': 'staff', 'menu::Seizoen & specials': 'staff',
     // Business
     'business::Dashboard & KPI': 'management', 'business::Omzet & rapporten': 'staff', 'business::Dagomzet': 'management', 'business::Boekhouding': 'management', 'business::Balans': 'management', 'business::BTW': 'staff', 'business::Lonen & afbetalingen': 'management', 'business::Kostengroepen': 'management', 'business::Documentenarchief': 'management', 'business::Bedrijfsmodel': 'staff', 'business::Personeelsplanning': 'staff', 'business::Cashflow': 'management', 'business::Doelen': 'management', 'business::Rentabiliteit': 'management',
     // Marketing (alles staff)
@@ -1591,7 +1591,7 @@
   function teamPostOpen() { return _inbox.items.filter(function (i) { return !i.klaar; }).length; }
   function loadTeamPost() { return api('GET', '/crew/inbox').then(function (j) { _inbox = { items: j.items || [], verstuurd: j.verstuurd || [], team: j.team || [], at: Date.now() }; try { emit('inbox'); } catch (e) {} return _inbox; }); }
   function clearTeamPost() { _inbox = { items: [], verstuurd: [], team: [], at: 0 }; try { emit('inbox'); } catch (e) {} }
-  function sendTeamPost(soort, aan, tekst) { return api('POST', '/crew/inbox', { soort: soort, aan: aan, tekst: tekst }).then(function (r) { return loadTeamPost().then(function () { return r; }); }); }
+  function sendTeamPost(soort, aan, tekst, tegen) { return api('POST', '/crew/inbox', { soort: soort, aan: aan, tekst: tekst, tegen: tegen || '' }).then(function (r) { return loadTeamPost().then(function () { return r; }); }); }
   function setTeamPostDone(id, klaar) { return api('POST', '/crew/inbox/' + encodeURIComponent(id) + '/klaar', { klaar: klaar !== false }).then(loadTeamPost); }
   function removeTeamPost(id) { return api('DELETE', '/crew/inbox/' + encodeURIComponent(id)).then(loadTeamPost); }
 
