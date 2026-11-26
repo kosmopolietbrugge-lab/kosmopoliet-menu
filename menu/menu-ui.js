@@ -13,62 +13,90 @@
      in de naam, zodat bv. "Reacties" of "Attracties" als Promoties vooraan op de kaart kwam. */
   function soort(c) {
     c = c || {};
-    if (/^(specials|suggestie|promotie|gewoon)$/.test(c.soort || '')) return c.soort;
+    if (/^(specials|shop|suggestie|promotie|gewoon)$/.test(c.soort || '')) return c.soort;
     var s = text(c);
     if (c.id === 'specials' || /\bspecials?\b/.test(s)) return 'specials';
+    if (c.id === 'shop' || /\b(shop|winkel)\b/.test(s)) return 'shop';
     if (/\b(suggest|aanrad)/.test(s)) return 'suggestie';
     if (/\b(promo|acties?\b)/.test(s)) return 'promotie';
     return 'gewoon';
   }
-  // 'special' = Specials, Suggesties en Promoties (altijd vooraan, eigen kleur); 'drink' = bar/zaal; 'food' = keuken.
+  // 'special' = Specials, Shop, Suggesties en Promoties (bovenaan, eigen kleur); 'drink' = bar/zaal; 'food' = keuken.
   function kind(c) {
     if (soort(c) !== 'gewoon') return 'special';
     return c.source === 'barzaal' ? 'drink' : 'food';
   }
+  // v0.133.0: Specials, daarnaast Shop, dan Suggesties en Promoties; daaronder de dranken, daaronder het eten.
   function rank(c) {
     var s = soort(c);
     if (s === 'specials') return 0;
-    if (s === 'suggestie') return 1;
-    if (s === 'promotie') return 2;
-    return c.source === 'barzaal' ? 3 : 4;
+    if (s === 'shop') return 1;
+    if (s === 'suggestie') return 2;
+    if (s === 'promotie') return 3;
+    return c.source === 'barzaal' ? 4 : 5;
   }
-  // De categorieën die gasten zien: Specials, Suggesties en Promoties blijven staan (ook leeg, behalve Specials), de rest enkel met beschikbare gerechten.
-  // Volgorde: Specials, Suggesties, Promoties, drank (bar/zaal), eten (keuken, voor → hoofd → dessert).
+  // De categorieën die gasten zien: Suggesties en Promoties blijven staan (ook leeg), de rest enkel met beschikbare gerechten.
+  // Een categorie met verborgen: true (oogje in Items en categorieën, bv. Shop) ziet de gast niet.
+  // Volgorde: Specials, Shop, Suggesties, Promoties, drank (bar/zaal), eten (keuken, voor → hoofd → dessert).
   function cats(D) {
     return D.getCategories().filter(function (c) {
-      if (kind(c) === 'special' && rank(c) !== 0) return true;
+      if (c.verborgen) return false;
+      if (soort(c) === 'suggestie' || soort(c) === 'promotie') return true;
       return D.getItems(c.id, true).length > 0;
     }).map(function (c, i) { return { c: c, i: i, r: rank(c), course: c.course || 99 }; })
       .sort(function (a, b) {
         if (a.r !== b.r) return a.r - b.r;
-        if (a.r === 4 && a.course !== b.course) return a.course - b.course;
+        if (a.r === 5 && a.course !== b.course) return a.course - b.course;
         return a.i - b.i;
       }).map(function (o) { return o.c; });
   }
-  // Vult de balk met categorie-knoppen. De schuifstand blijft behouden en de gekozen knop komt in beeld.
+  // Vult de balk met categorie-knoppen, in rijen: bovenaan Specials en Shop, daaronder de dranken, daaronder het eten.
+  // Elke rij schuift apart horizontaal; de schuifstand blijft behouden en de gekozen knop komt in beeld.
+  // Meteen ook de vertaling van de kaartteksten (menu/kaart-vertaling.js) en de reviewknoppen bijwerken.
   function chips(bar, list, activeId, onPick) {
-    var keep = bar.scrollLeft, prev = null, active = null;
+    if (window.KosmoKaartVertaling && window.KosmoData) { try { KosmoKaartVertaling.toepassen(window.KosmoData); } catch (e) {} }
+    reviews();
+    var keep = {}, active = null, rijen = {};
+    bar.querySelectorAll('.cat-rij').forEach(function (r) { keep[r.getAttribute('data-rij')] = r.scrollLeft; });
     bar.innerHTML = '';
     list.forEach(function (c) {
-      var k = kind(c), b = document.createElement('button');
-      b.className = 'cat-chip k-' + k + (c.id === activeId ? ' active' : '') + (prev && prev !== k ? ' grp-start' : '');
-      b.textContent = c.name; prev = k;
+      var k = kind(c), rij = rijen[k];
+      if (!rij) { rij = rijen[k] = document.createElement('div'); rij.className = 'cat-rij rij-' + k; rij.setAttribute('data-rij', k); bar.appendChild(rij); }
+      var b = document.createElement('button');
+      b.className = 'cat-chip k-' + k + (c.id === activeId ? ' active' : '');
+      b.textContent = c.name;
       if (c.id === activeId) active = b;
       b.addEventListener('click', function () { onPick(c); });
-      bar.appendChild(b);
+      rij.appendChild(b);
     });
-    bar.scrollLeft = keep;
+    Object.keys(rijen).forEach(function (k) { if (keep[k] != null) rijen[k].scrollLeft = keep[k]; });
     if (active) {
-      var l = active.offsetLeft, r = l + active.offsetWidth;
-      if (l < bar.scrollLeft + 8 || r > bar.scrollLeft + bar.clientWidth - 8) bar.scrollLeft = Math.max(0, l - (bar.clientWidth - active.offsetWidth) / 2);
+      var r = active.parentNode, l = active.offsetLeft - r.offsetLeft, rr = l + active.offsetWidth;
+      if (l < r.scrollLeft + 8 || rr > r.scrollLeft + r.clientWidth - 8) r.scrollLeft = Math.max(0, l - (r.clientWidth - active.offsetWidth) / 2);
     }
+  }
+  /* Onderaan elke kaartpagina: een review schrijven op Google of Tripadvisor.
+     De links staan in Menu visual settings (reviewGoogle, reviewTripadvisor); zonder eigen link de standaard hieronder. */
+  var REVIEW_GOOGLE = 'https://www.google.com/maps/search/?api=1&query=Kosmopoliet%2C+Hoogstraat+32%2C+8000+Brugge';
+  var REVIEW_TRIPADVISOR = 'https://www.tripadvisor.com/UserReviewEdit-g188671-d32976434-Kosmopoliet-Bruges_West_Flanders_Province.html';
+  function veiligeLink(u, std) { u = String(u || '').trim(); return /^https:\/\/[^\s"'<>]+$/i.test(u) ? u : std; }
+  function reviewLinks(v) { v = v || {}; return { google: veiligeLink(v.reviewGoogle, REVIEW_GOOGLE), tripadvisor: veiligeLink(v.reviewTripadvisor, REVIEW_TRIPADVISOR) }; }
+  function reviews() {
+    var host = document.getElementById('reviews'); if (!host) return;
+    var v = {}; try { v = window.KosmoData.getVisual() || {}; } catch (e) {}
+    var l = reviewLinks(v), esc = window.KosmoHtml.esc, sig = l.google + '|' + l.tripadvisor;
+    if (host.getAttribute('data-sig') === sig) return;
+    host.setAttribute('data-sig', sig);
+    host.innerHTML = '<p class="reviews-titel">Vond je het lekker? Laat een review achter</p><div class="reviews-knoppen">' +
+      '<a class="review-knop google" target="_blank" rel="noopener" href="' + esc(l.google) + '"><span>Review op Google</span></a>' +
+      '<a class="review-knop tripadvisor" target="_blank" rel="noopener" href="' + esc(l.tripadvisor) + '"><span>Review op Tripadvisor</span></a></div>';
   }
 
   // De gerechten van een categorie, in de volgorde van de kaart. Specials houdt de volgorde van de kaart (zelf te schuiven in
   // Menukaart-beheer); Suggesties/Promoties staan op gang (voor → hoofd → dessert → drank).
   function items(D, cat) {
     var list = D.getItems(cat.id, true);
-    if (kind(cat) === 'special' && cat.id !== 'specials' && D.itemCourse) {
+    if ((soort(cat) === 'suggestie' || soort(cat) === 'promotie') && D.itemCourse) {
       list = list.map(function (it, i) { return { it: it, i: i, c: D.itemCourse(it) }; })
         .sort(function (a, b) { return a.c - b.c || a.i - b.i; })
         .map(function (o) { return o.it; });
@@ -154,7 +182,7 @@
     document.querySelectorAll('.sheet').forEach(function (s) { drag(s, closeAll); });
   }
 
-  window.KosmoMenuUI = { soort: soort, kind: kind, cats: cats, items: items, price: price, euro: euro, chips: chips, init: init, opened: opened, closed: closed };
+  window.KosmoMenuUI = { soort: soort, kind: kind, rank: rank, cats: cats, items: items, price: price, euro: euro, chips: chips, init: init, opened: opened, closed: closed, reviews: reviews, reviewLinks: reviewLinks };
 })();
 
 /* ============================================================

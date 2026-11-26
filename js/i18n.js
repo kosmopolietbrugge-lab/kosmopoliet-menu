@@ -11,7 +11,14 @@
   'use strict';
   var STORE = 'kosmo-uilang';
   var lang = 'nl';
-  try { lang = localStorage.getItem(STORE) || 'nl'; } catch (e) {}
+  var gekozen = ''; try { gekozen = localStorage.getItem(STORE) || ''; } catch (e) {}
+  lang = gekozen || 'nl';
+  // v0.133.0: op de gastkaart (<html data-gast="1">) zonder eigen keuze meteen de taal van de telefoon, zodat een
+  // anderstalige gast niets hoeft te doen. Niet bewaard: kiest de gast zelf een vlag, dan geldt die.
+  if (!gekozen && document.documentElement && document.documentElement.getAttribute('data-gast') === '1') {
+    var talen = []; try { talen = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || '']; } catch (e) {}
+    for (var ti = 0; ti < talen.length; ti++) { var tc = String(talen[ti] || '').slice(0, 2).toLowerCase(); if (['nl', 'en', 'fr', 'de', 'es', 'pt', 'ne'].indexOf(tc) >= 0) { lang = tc; break; } }
+  }
 
   var DICT = {
     ne: {
@@ -613,6 +620,9 @@
   // Deelknop bij elk gerecht (menu.html en website-menu.html).
   var GAST_DELEN = {"en":{"Delen":"Share","Link gekopieerd":"Link copied","Kopieer deze link":"Copy this link","Dit gerecht staat nu niet op de kaart":"This dish is not on the menu right now"},"pt":{"Delen":"Partilhar","Link gekopieerd":"Link copiado","Kopieer deze link":"Copie este link","Dit gerecht staat nu niet op de kaart":"Este prato não está no cardápio neste momento"},"ne":{"Delen":"सेयर गर्नुहोस्","Link gekopieerd":"लिङ्क कपी भयो","Kopieer deze link":"यो लिङ्क कपी गर्नुहोस्","Dit gerecht staat nu niet op de kaart":"यो परिकार अहिले मेनुमा छैन"},"fr":{"Delen":"Partager","Link gekopieerd":"Lien copié","Kopieer deze link":"Copiez ce lien","Dit gerecht staat nu niet op de kaart":"Ce plat n’est pas à la carte pour le moment"},"de":{"Delen":"Teilen","Link gekopieerd":"Link kopiert","Kopieer deze link":"Diesen Link kopieren","Dit gerecht staat nu niet op de kaart":"Dieses Gericht steht gerade nicht auf der Karte"},"es":{"Delen":"Compartir","Link gekopieerd":"Enlace copiado","Kopieer deze link":"Copia este enlace","Dit gerecht staat nu niet op de kaart":"Este plato no está en la carta ahora mismo"}};
   Object.keys(GAST_DELEN).forEach(function (l) { DICT[l] = DICT[l] || {}; Object.keys(GAST_DELEN[l]).forEach(function (k) { DICT[l][k] = GAST_DELEN[l][k]; }); });
+  // Reviewknoppen onderaan de kaart (menu.html en website-menu.html, v0.133.0).
+  var GAST_REVIEW = {"en":{"Vond je het lekker? Laat een review achter":"Did you enjoy it? Leave a review","Review op Google":"Review on Google","Review op Tripadvisor":"Review on Tripadvisor"},"pt":{"Vond je het lekker? Laat een review achter":"Gostou? Deixe uma avaliação","Review op Google":"Avaliar no Google","Review op Tripadvisor":"Avaliar no Tripadvisor"},"ne":{"Vond je het lekker? Laat een review achter":"मन पर्‍यो? समीक्षा लेख्नुहोस्","Review op Google":"Google मा समीक्षा","Review op Tripadvisor":"Tripadvisor मा समीक्षा"},"fr":{"Vond je het lekker? Laat een review achter":"Vous avez aimé ? Laissez un avis","Review op Google":"Avis sur Google","Review op Tripadvisor":"Avis sur Tripadvisor"},"de":{"Vond je het lekker? Laat een review achter":"Hat es Ihnen geschmeckt? Hinterlassen Sie eine Bewertung","Review op Google":"Bewertung auf Google","Review op Tripadvisor":"Bewertung auf Tripadvisor"},"es":{"Vond je het lekker? Laat een review achter":"¿Le ha gustado? Deje una reseña","Review op Google":"Reseña en Google","Review op Tripadvisor":"Reseña en Tripadvisor"}};
+  Object.keys(GAST_REVIEW).forEach(function (l) { DICT[l] = DICT[l] || {}; Object.keys(GAST_REVIEW[l]).forEach(function (k) { DICT[l][k] = GAST_REVIEW[l][k]; }); });
 
   /* ---- opzoeken ----
      Een tekst wordt in deze volgorde gezocht: (1) letterlijk, (2) met getallen als {n}, (3) zonder getallen,

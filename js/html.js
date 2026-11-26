@@ -7,7 +7,7 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return TEKENS[c]; }); }
   // Versie van deze code (v0.124.0). Moet gelijk zijn aan CACHE in sw.js; tools/controleer.js kijkt dat na, anders geen uitrol.
   // js/pouch-sync.js stuurt ze mee met elke aanvraag naar de databank; de server weigert schrijfacties van een andere versie.
-  var VERSIE = 'v0.132.0';
+  var VERSIE = 'v0.133.0';
   // Mail naar buiten (v0.131.0): leveranciers krijgen mail vanuit het zaakadres. De link opent Gmail in
   // dat account met een nieuw bericht klaar (aan, onderwerp, tekst); de gebruiker leest na en drukt zelf op verzenden.
   var ZAAK_MAIL = 'kosmopoliet.brugge@gmail.com';

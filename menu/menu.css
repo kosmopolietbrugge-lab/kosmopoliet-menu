@@ -104,13 +104,14 @@ body{top:0 !important;}
 .wm-item{ cursor:default; }
 
 /* categories */
-.cat-bar{ position:sticky; top:0; z-index:20; display:flex; gap:8px; overflow-x:auto; padding:12px 16px;
+/* v0.133.0: rijen onder elkaar — bovenaan Specials en Shop, daaronder de dranken, daaronder het eten; elke rij schuift apart */
+.cat-bar{ position:sticky; top:0; z-index:20; display:flex; flex-direction:column; gap:7px; padding:10px 0;
   background:color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter:blur(10px);
-  border-bottom:1px solid var(--border); scrollbar-width:none; }
-.cat-bar::-webkit-scrollbar{ display:none; }
-.cat-chip{ white-space:nowrap; padding:9px 16px; border-radius:999px; border:1px solid var(--border);
+  border-bottom:1px solid var(--border); }
+.cat-rij{ display:flex; gap:8px; overflow-x:auto; padding:0 16px; scrollbar-width:none; }
+.cat-rij::-webkit-scrollbar{ display:none; }
+.cat-chip{ white-space:nowrap; flex:none; padding:8px 15px; border-radius:999px; border:1px solid var(--border);
   background:var(--surface); color:var(--dim); font-size:14px; font-weight:700; transition:.15s var(--ease); }
-.cat-chip.grp-start{ margin-left:14px; }
 /* kleur per soort: knop met tintje in rust, gevuld als gekozen */
 .cat-chip.k-special{ --k:var(--c-special); }
 .cat-chip.k-food{ --k:var(--c-food); }
@@ -297,9 +298,12 @@ button.table-badge{ cursor:pointer; font-family:inherit; }
 
 /* Allergie of intolerantie? (menu-ui.js) */
 .alg-bar{ padding:10px 16px 0; }
-.alg-gast-knop{ width:100%; text-align:left; font:inherit; font-size:14px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:11px 14px; cursor:pointer; }
-.alg-gast-knop.on{ border-color:var(--gold); }
-.alg-gast-knop u{ color:var(--gold); margin-left:6px; }
+/* v0.133.0: rode knop, witte vette tekst — valt meteen op */
+.alg-gast-knop{ width:100%; text-align:center; font:inherit; font-size:15px; font-weight:700; letter-spacing:.01em; color:#fff; background:#C62828; border:1px solid #C62828; border-radius:12px; padding:12px 14px; cursor:pointer; box-shadow:0 2px 10px rgba(198,40,40,.28); }
+.alg-gast-knop:hover, .alg-gast-knop:focus-visible{ background:#B71C1C; border-color:#B71C1C; }
+.alg-gast-knop:focus-visible{ outline:3px solid color-mix(in srgb, #C62828 40%, transparent); outline-offset:2px; }
+.alg-gast-knop.on{ text-align:left; font-weight:600; }
+.alg-gast-knop u{ color:#fff; margin-left:6px; font-weight:700; }
 .alg-gast-uitleg{ font-size:13px; color:var(--dim); margin:0 0 14px; line-height:1.45; }
 .alg-gast-kop{ margin:16px 0 8px; }
 .alg-gast-kop.alg-gast-ok{ color:#7bc48f; }
@@ -326,3 +330,15 @@ button.table-badge{ cursor:pointer; font-family:inherit; }
 /* Herkomst van de kaart (v0.105.0): klein, onderaan, niet storend. */
 .gm-credit{ display:flex; align-items:center; justify-content:center; gap:8px; margin:28px 0 18px; font-size:11.5px; letter-spacing:.04em; color:var(--dim); opacity:.85; }
 .gm-credit .dot{ width:7px; height:7px; border-radius:50%; background:#57c07f; flex:none; }
+
+/* Review schrijven op Google of Tripadvisor, onderaan elke kaartpagina (menu-ui.js reviews()) */
+.items:has(+ .reviews){ padding-bottom:12px; }
+.reviews{ max-width:var(--maxw); margin:0 auto; padding:8px 16px 110px; text-align:center; }
+.reviews:empty{ display:none; }
+.reviews-titel{ margin:6px 0 12px; color:var(--text); font-size:15px; font-weight:700; }
+.reviews-knoppen{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+.review-knop{ flex:1 1 180px; max-width:280px; display:inline-flex; align-items:center; justify-content:center; padding:12px 16px; border-radius:12px; font-weight:700; font-size:14px; text-decoration:none; border:1px solid var(--border); background:var(--surface); color:var(--text); }
+.review-knop.google{ border-color:#4285F4; }
+.review-knop.tripadvisor{ border-color:#34E0A1; }
+.review-knop:hover, .review-knop:focus-visible{ background:color-mix(in srgb, var(--gold) 12%, var(--surface)); }
+.review-knop::before{ content:"★ "; color:var(--gold); }
