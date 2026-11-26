@@ -709,7 +709,15 @@
   function connect() {
     if (paused) return;
     if (!('MutationObserver' in window)) return;
-    if (!mo) mo = new MutationObserver(function () { if (pending) return; pending = true; requestAnimationFrame(function () { pending = false; if (mo) mo.disconnect(); applyTo(document.body); connect(); }); });
+    // v0.133.1: requestAnimationFrame tikt niet zolang de pagina niet in beeld is (tabblad op de achtergrond, kaart geopend vanuit
+    // WhatsApp). Dan bleef 'pending' voor altijd waar en werd niets nieuws meer vertaald. Nu wint wie eerst komt: het beeld of 120 ms.
+    if (!mo) mo = new MutationObserver(function () {
+      if (pending) return; pending = true;
+      var gedaan = false, t = null;
+      function doe() { if (gedaan) return; gedaan = true; if (t) clearTimeout(t); pending = false; if (mo) mo.disconnect(); applyTo(document.body); connect(); }
+      t = setTimeout(doe, 120);
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(doe);
+    });
     mo.observe(document.body, { childList: true, subtree: true, characterData: true });
   }
   function updateFlags() { document.querySelectorAll('.lang-switch button[data-lang]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-lang') === lang); }); }
