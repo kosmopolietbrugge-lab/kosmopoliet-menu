@@ -45,6 +45,7 @@
     'barzaal::Items en categorieen bar': 'staff', 'barzaal::Bestellingen en voorraad bar': 'staff', 'barzaal::Dagafsluiting': 'staff', 'barzaal::Reserveringen': 'staff',
     // F&B (alles staff)
     'menu::Prijzen leveranciers': 'management', 'housekeeping::Prijzen leveranciers': 'management',
+    'housekeeping::Bonnen zonder tegenhanger': 'management', 'housekeeping::Nieuwe ingrediënten uit facturen': 'management',
     'menu::Menukaart (alle categorieen)': 'staff', 'menu::Recepten': 'staff', 'menu::Menu in opbouw': 'staff', 'menu::F&B cost analyse': 'staff', 'menu::F&B rekenmodule': 'staff', 'menu::Foodcost': 'staff', 'menu::Menu-analyse': 'staff', 'menu::Margecontributie / Mix-marge': 'staff', 'menu::Klantmenu (QR)': 'staff', 'menu::Seizoen & specials': 'staff',
     // Business
     'business::Dashboard & KPI': 'management', 'business::Omzet & rapporten': 'staff', 'business::Dagomzet': 'management', 'business::Boekhouding': 'management', 'business::Balans': 'management', 'business::BTW': 'staff', 'business::Lonen & afbetalingen': 'management', 'business::Kostengroepen': 'management', 'business::Documentenarchief': 'management', 'business::Bedrijfsmodel': 'staff', 'business::Personeelsplanning': 'staff', 'business::Cashflow': 'management', 'business::Doelen': 'management', 'business::Rentabiliteit': 'management',
@@ -1480,6 +1481,8 @@
   var CLEARANCE_MIN = {
     'business::Dagomzet': 'management', 'business::Boekhouding': 'management', 'business::Lonen & afbetalingen': 'management', 'business::Kostengroepen': 'management',
     'business::Documentenarchief': 'management', 'marketing::Gastenbestand': 'staff',
+    // Inkoopcontrole (v0.135.0): leest de documenten, die enkel management krijgt.
+    'housekeeping::Bonnen zonder tegenhanger': 'management', 'housekeeping::Nieuwe ingrediënten uit facturen': 'management',
     // Extra modules: wie de gegevens niet krijgt (js/db-toegang.js), kan de tegel niet openen.
     'kosmokrew::Fooienverdeling': 'management', 'business::Fooienverdeling': 'management', 'kosmokrew::Prestaties naar Liantis': 'management', 'business::Prestaties naar Liantis': 'management',
     'business::Bankkoppeling': 'management', 'business::Afwijkingsmeldingen': 'management',
@@ -1587,9 +1590,15 @@
   var TODOKEY = 'kosmo-todos-v1';
   function loadTodos() { try { return JSON.parse(localStorage.getItem(TODOKEY) || '[]'); } catch (e) { return []; } }
   function saveTodos(list) { try { localStorage.setItem(TODOKEY, JSON.stringify(list)); } catch (e) {} broadcast('todos'); try { emit('todos'); } catch (e) {} }
-  function getTodos() { return loadTodos().slice().sort(function (a, b) { return (b.at || 0) - (a.at || 0); }); }
+  function getTodos() { return loadTodos().filter(function (t) { return !t.weg; }).sort(function (a, b) { return (b.at || 0) - (a.at || 0); }); }
   function addTodo(name, message) { var list = loadTodos(); list.push({ id: uid('td'), name: name, message: message, at: Date.now() }); saveTodos(list); return list; }
-  function dismissTodo(id) { saveTodos(loadTodos().filter(function (t) { return t.id !== id; })); }
+  // Een to-do met een sleutel (v0.135.0, uit de inkoop) wordt bij wegklikken verborgen tot zijn stand verandert;
+  // anders zou de volgende ronde hem meteen terugzetten. De rest wordt gewoon verwijderd.
+  function dismissTodo(id) {
+    var list = loadTodos(), t = list.find(function (x) { return x.id === id; });
+    if (t && t.sleutel) { t.weg = true; t.wegStand = t.stand; saveTodos(list); }
+    else saveTodos(list.filter(function (x) { return x.id !== id; }));
+  }
   /* ---------- To-do's en berichten per persoon (v0.112.0) ----------
      Woont op de Kissing Karrots Server (server-inbox.js), niet in de sync: elk toestel krijgt enkel de post van wie er
      aangemeld is. Hier enkel een laatste kopie in het geheugen (niet in localStorage: een gedeeld toestel bewaart niets). */
