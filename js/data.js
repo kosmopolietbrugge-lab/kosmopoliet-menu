@@ -42,13 +42,13 @@
     // Keuken
     'keuken::Items en categorieen keuken': 'staff', 'keuken::Bestellingen en voorraad keuken': 'staff', 'keuken::Verspilling': 'staff',
     // Bar/zaal
-    'barzaal::Items en categorieen bar': 'staff', 'barzaal::Bestellingen en voorraad bar': 'staff', 'barzaal::Dagafsluiting': 'staff', 'barzaal::Reserveringen': 'staff',
+    'barzaal::Items en categorieen bar': 'staff', 'barzaal::Bestellingen en voorraad bar': 'staff', 'barzaal::Dagafsluiting': 'staff', 'barzaal::Dagomzet invoeren': 'management', 'barzaal::Reserveringen': 'staff',
     // F&B (alles staff)
     'menu::Prijzen leveranciers': 'management', 'housekeeping::Prijzen leveranciers': 'management',
     'housekeeping::Bonnen zonder tegenhanger': 'management', 'housekeeping::Nieuwe ingrediënten uit facturen': 'management',
     'menu::Menukaart (alle categorieen)': 'staff', 'menu::Recepten': 'staff', 'menu::Menu in opbouw': 'staff', 'menu::F&B cost analyse': 'staff', 'menu::F&B rekenmodule': 'staff', 'menu::Foodcost': 'staff', 'menu::Menu-analyse': 'staff', 'menu::Margecontributie / Mix-marge': 'staff', 'menu::Klantmenu (QR)': 'staff', 'menu::Seizoen & specials': 'staff',
     // Business
-    'business::Dashboard & KPI': 'management', 'business::Omzet & rapporten': 'staff', 'business::Dagomzet': 'management', 'business::Boekhouding': 'management', 'business::Balans': 'management', 'business::BTW': 'staff', 'business::Lonen & afbetalingen': 'management', 'business::Kostengroepen': 'management', 'business::Documentenarchief': 'management', 'business::Bedrijfsmodel': 'staff', 'business::Personeelsplanning': 'staff', 'business::Cashflow': 'management', 'business::Doelen': 'management', 'business::Rentabiliteit': 'management',
+    'business::Dashboard & KPI': 'management', 'business::Omzet & rapporten': 'staff', 'business::Boekhouding': 'management', 'business::Balans': 'management', 'business::BTW': 'staff', 'business::Lonen & afbetalingen': 'management', 'business::Kostengroepen': 'management', 'business::Documentenarchief': 'management', 'business::Bedrijfsmodel': 'staff', 'business::Personeelsplanning': 'staff', 'business::Cashflow': 'management', 'business::Doelen': 'management', 'business::Rentabiliteit': 'management',
     // Marketing (alles staff)
     'marketing::Campagnes': 'staff', 'marketing::Social media': 'staff', 'marketing::Reviews': 'staff', 'marketing::Nieuwsbrief': 'staff', 'marketing::Loyaliteit': 'staff', 'marketing::Gastenbestand': 'staff',
     // Housekeeping (alles staff)
@@ -1475,12 +1475,12 @@
   const ROLE_RANK = { visitor: 1, help: 1, staff: 2, management: 3 }; // visitor = bezoeker (v0.117.0): kijkt zoals help, schrijft niets
   function roleRank(r) { return ROLE_RANK[r] || 1; }
   // Hernoemde tegels behouden hun eerder ingestelde toegangsniveau (sleutel = module::tegelnaam).
-  const LEGACY_TILE_KEYS = { 'menu::Recepten': 'menu::F&B rekenmodule', 'menu::F&B cost analyse': 'menu::Foodcost', 'keuken::Voorbereidende fiche': 'keuken::Voorbereiding' };
+  const LEGACY_TILE_KEYS = { 'menu::Recepten': 'menu::F&B rekenmodule', 'menu::F&B cost analyse': 'menu::Foodcost', 'keuken::Voorbereidende fiche': 'keuken::Voorbereiding', 'barzaal::Dagomzet invoeren': 'business::Dagomzet' };
   function _clearanceIngesteld(key) { var d = load(); if (d.clearance && d.clearance[key]) return d.clearance[key]; var old = LEGACY_TILE_KEYS[key]; if (old && d.clearance && d.clearance[old]) return d.clearance[old]; return DEFAULT_CLEARANCE[key] || 'help'; }
   // Tegels die afgeschermde gegevens tonen of bewerken (js/db-toegang.js), kunnen niet lager staan. Rapporten (omzet, btw, balans,
   // bedrijfsmodel, KPI, cashflow, rentabiliteit) werken voor staff met de cijferspiegel en zijn vrij in te stellen.
   var CLEARANCE_MIN = {
-    'business::Dagomzet': 'management', 'business::Boekhouding': 'management', 'business::Lonen & afbetalingen': 'management', 'business::Kostengroepen': 'management',
+    'barzaal::Dagomzet invoeren': 'management', 'business::Boekhouding': 'management', 'business::Lonen & afbetalingen': 'management', 'business::Kostengroepen': 'management',
     'business::Documentenarchief': 'management', 'marketing::Gastenbestand': 'staff',
     // Inkoopcontrole (v0.135.0): leest de documenten, die enkel management krijgt.
     'housekeeping::Bonnen zonder tegenhanger': 'management', 'housekeeping::Nieuwe ingrediënten uit facturen': 'management',
