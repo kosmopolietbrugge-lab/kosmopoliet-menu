@@ -1010,16 +1010,19 @@
   // rapport uit betalingen: bruto/netto/btw per tarief, per betaalwijze, eten vs drank, covers
   function computeReport(payments) {
     var gross = 0, net = 0, byRate = {}, byMethod = {}, food = { qty: 0, gross: 0, net: 0 }, drink = { qty: 0, gross: 0, net: 0 }, covers = {}, items = {}, itemsCount = 0;
+    var dagtotalen = 0;   // dagen uit Dagomzet / het inkomstenoverzicht: enkel bedragen, geen afzonderlijke items (v0.139.1)
     (payments || []).forEach(function (p) {
       gross += p.gross; net += p.net;
+      if (p.synthetic) dagtotalen++;
       byMethod[p.method] = (byMethod[p.method] || 0) + p.gross;
       if (p.sessionId) covers[p.sessionId] = Math.max(covers[p.sessionId] || 0, p.persons || 0);
       p.lines.forEach(function (l) {
         var g = l.price * l.qty, n = g / (1 + (l.vatRate || 0) / 100), r = l.vatRate || 0;
         if (!byRate[r]) byRate[r] = { gross: 0, net: 0, vat: 0 };
         byRate[r].gross += g; byRate[r].net += n; byRate[r].vat += g - n;
-        var b = l.dest === 'bar' ? drink : food; b.qty += l.qty; b.gross += g; b.net += n;
-        if (p.synthetic) return; // dagomzet uit het overzicht: geen afzonderlijke items
+        var b = l.dest === 'bar' ? drink : food; b.gross += g; b.net += n;
+        if (p.synthetic) return; // dagomzet uit het overzicht: geen afzonderlijke items (en dus ook geen aantallen)
+        b.qty += l.qty;
         itemsCount += l.qty;
         var it = items[l.itemId] || (items[l.itemId] = { itemId: l.itemId, name: l.name, dest: l.dest, qty: 0, gross: 0 });
         it.qty += l.qty; it.gross += g;
@@ -1027,7 +1030,7 @@
     });
     var totCovers = 0; Object.keys(covers).forEach(function (k) { totCovers += covers[k]; });
     var nSess = Object.keys(covers).length;
-    return { gross: round2(gross), net: round2(net), vat: round2(gross - net), payments: (payments || []).length, sessions: nSess, covers: totCovers, itemsCount: itemsCount, avgPerCustomer: round2(totCovers ? gross / totCovers : 0), avgPerSession: round2(nSess ? gross / nSess : 0), byRate: byRate, byMethod: byMethod, food: food, drink: drink, items: items };
+    return { gross: round2(gross), net: round2(net), vat: round2(gross - net), payments: (payments || []).length, sessions: nSess, covers: totCovers, itemsCount: itemsCount, dagtotalen: dagtotalen, kassaBetalingen: (payments || []).length - dagtotalen, avgPerCustomer: round2(totCovers ? gross / totCovers : 0), avgPerSession: round2(nSess ? gross / nSess : 0), byRate: byRate, byMethod: byMethod, food: food, drink: drink, items: items };
   }
   // ---- bedrijfsdag: omzet NA middernacht telt bij de gestarte dag (cutoff-uur) ----
   const DAY_CUTOFF_HOUR = 6; // vóór 06:00 hoort bij de vorige (gestarte) dag
