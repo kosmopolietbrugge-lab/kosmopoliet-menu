@@ -1118,9 +1118,10 @@
   function isoWeek(d) { var x = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); var dn = (x.getUTCDay() + 6) % 7; x.setUTCDate(x.getUTCDate() - dn + 3); var ft = new Date(Date.UTC(x.getUTCFullYear(), 0, 4)); var wk = 1 + Math.round(((x - ft) / 86400000 - 3 + ((ft.getUTCDay() + 6) % 7)) / 7); return { year: x.getUTCFullYear(), week: wk }; }
 
   // dagrapporten van de lopende week (ma–zo), met weeknr
-  function getRunningWeek() {
+  // offset: 0 = lopende week, -1 = vorige week, 1 = volgende week (pijlen in Omzet & rapporten).
+  function getRunningWeek(offset) {
     var today = _parse(businessDate(Date.now()));
-    var mon = _mondayOf(today), sun = _addDays(mon, 6);
+    var mon = _addDays(_mondayOf(today), 7 * Math.round(Number(offset) || 0)), sun = _addDays(mon, 6);
     var iw = isoWeek(mon);
     var days = [];
     for (var i = 0; i < 7; i++) { var d = _addDays(mon, i); var ds = _fmtDate(d); days.push({ date: ds, report: dayReport(ds) }); }
