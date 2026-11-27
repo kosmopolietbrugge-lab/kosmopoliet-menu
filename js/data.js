@@ -1570,6 +1570,16 @@
   function logoutServer() {
     return api('POST', '/auth/logout', {}).catch(function () {}).then(function () { clearSession(); saveRoster([]); try { if (window.KosmoSync && window.KosmoSync.opruimen) return window.KosmoSync.opruimen(); } catch (e) {} });
   }
+  /* Afmelden omdat de app op een computer gesloten was (js/venster-sessie.js, v0.139.0). Zoals logoutServer, maar alleen als de
+     Kissing Karrots Server echt antwoordt: is hij onbereikbaar, dan blijft de lokale aanmelding staan (offline niemand buitensluiten).
+     Geeft een belofte: true als er afgemeld is. */
+  function afmeldenNaSluiten() {
+    return api('POST', '/auth/logout', {}).then(function () {
+      clearSession(); saveRoster([]);
+      try { if (window.KosmoSync && window.KosmoSync.opruimen) return window.KosmoSync.opruimen().then(function () { return true; }); } catch (e) {}
+      return true;
+    }, function () { return false; });
+  }
   // sessie = wie op DIT toestel is ingelogd (niet gesynct)
   function getSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (e) { return null; } }
   function setSession(u) { try { localStorage.setItem(SESSION_KEY, JSON.stringify(u)); } catch (e) {} }
@@ -2363,7 +2373,7 @@
   window.KosmoData = {
     ALLERGEEN_SUB: ALLERGEEN_SUB, getVisual, setVisual, heroLib, heroStandaard, heroThema, heroVoor, setHero, addHero, removeHero,
     checkStaffPin, setStaffPin, hasStaffPin, getUsers, authUser, addUser, updateUser, removeUser, roleRank, clearanceMinimum, refreshUsers,
-    loginNames, whoAmI, logoutServer, getClearance, setClearance, getSession, setSession, clearSession, avgSpendPerGuest, depositAmountFor,
+    loginNames, whoAmI, logoutServer, afmeldenNaSluiten,getClearance, setClearance, getSession, setSession, clearSession, avgSpendPerGuest, depositAmountFor,
     depositAdvice, getCategories, addCategory, updateCategory, removeCategory, moveCategory, vatCodeFor, vatRate, defaultVatForSource,
     VAT_RATES, getItems, getItem, addItem, updateItem, removeItem, setAvailable, setArchived, getDrinkItems, effectivePrice, itemCourse,
     promoInfo, promoActivePct, promoDefaultUntil, promoToInput, promoFromInput, promoUntilLabel, getPromoReport, addItemCategory,
